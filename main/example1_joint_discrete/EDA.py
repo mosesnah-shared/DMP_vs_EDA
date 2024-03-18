@@ -47,8 +47,11 @@ data.qpos[ 0:nq ] = q_init
 mujoco.mj_forward( model, data )
 
 # The joint-impedances of the 2-DOF robot 
-Kq = 150.0 * np.eye( nq )
-Bq =  50.0 * np.eye( nq )
+# Can try any values that you want.
+kq = 150
+bq = 150
+Kq = kq * np.eye( nq )
+Bq = bq * np.eye( nq )
 
 # The parameters of the minimum-jerk trajectory.
 t0   = 0.3                          # Starting time
@@ -105,7 +108,8 @@ while data.time <= T:
 # Save Data as mat file for MATLAB visualization
 if is_save:
     data_dic = { "t_arr": t_mat, "q_arr": q_mat, "q0_arr": q0_mat, "dq_arr": dq_mat, "dq0_arr": dq0_mat, "Kq": Kq, "Bq": Bq }
-    savemat( CURRENT_PATH + "/data/EDA.mat", data_dic )
+    savemat( CURRENT_PATH + "/data/EDA_Kq" + f"{kq}".replace('.', 'p') + "_Bq" + f"{bq}".replace('.', 'p') + ".mat", data_dic )
+    # Substitute . in float as p for readability.
 
 if is_view:            
-    viewer.close()
+    viewer.close( )
