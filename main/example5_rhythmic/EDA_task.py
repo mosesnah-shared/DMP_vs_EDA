@@ -145,9 +145,7 @@ if is_save:
                  "p0_arr": p0_mat, "dq_arr": dq_mat, "dp0_arr": dp0_mat, "Kp": Kp, "Bq": Bp, "Jp_arr": Jp_mat }
     
     savemat( CURRENT_PATH + "/data/EDA_task_rhythmic.mat", data_dic )
-
     # Substitute . in float as p for readability.
-
 
 if is_view:            
     viewer.close()
