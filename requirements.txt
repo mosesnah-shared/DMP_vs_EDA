@@ -1,0 +1,12 @@
+mujoco
+mujoco-python-viewer
+numpy
+scipy
+matplotlib
+mediapy
+pyyaml
+torch
+tensorboard
+gymnasium
+moviepy
+pygame

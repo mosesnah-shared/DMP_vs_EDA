@@ -1,0 +1,63 @@
+<!-- =========================================================================== #
+# Project:        Planar 2DOF Robot
+# Title:          A Planar 2DOF robot with torque actuators
+# Author:         Moses C. Nah
+# Creation Date:  Wednesday, Oct 19th, 2022
+# ============================================================================= #  -->
+
+<mujoco model="3DOF_Planar_Robot">
+
+  <!-- Setting 'inertiafromgeom' as 'auto' forces the MuJoCo compiler to infer the inertial attributes based on defined geom + mass value, and will only use the inertia values if it is specifically defined.
+       By setting 'inertiafromgeom' as 'auto', the xml compiler will use the explicitly defined inertial parameters for the upperArm and foreArm body,
+       and will infer the inertial parameters from geometry for the whip model -->
+  <compiler inertiafromgeom = "auto" angle = "radian"/>
+
+   <!-- (semi-) implicit Euler method was used for the integrator with time step of 0.1ms -->
+	<option timestep='0.001' iterations='50' integrator='Euler' collision='all' gravity="0 0 0"/>
+
+  <asset>
+    <!-- Texture of the surrounding sky box
+         setting everything as white-ish color for better visualization -->
+     <texture type="skybox"
+              builtin="flat"
+              rgb1="1 1 1"
+              rgb2="1 1 1"
+              width="100"
+              height="100"/>
+
+     <!-- Joint and Limb Color -->
+		 <material name="JointColor" 		 rgba="0.75 0.0 0.75 1" />
+		 <material name="LimbColor" 		 rgba="0.1 0.1 0.1 1" />
+
+  </asset>
+
+  <worldbody>
+
+    
+		<body name='body1' pos='0 0 0' euler='0 0 0'>
+      <joint name='joint1' ref='0' type='hinge' stiffness='0' pos='0 0 0' axis='0 0 1' />
+			<inertial pos='0.5 0 0' mass='1' diaginertia='1 1 1'/>
+			<geom name='geom1' type='sphere' pos='0 0 0' material='JointColor' size='0.16' mass='0'/>
+			<geom type='cylinder' fromto='0 0 0 1 0 0'   material='LimbColor'  size='0.08' mass='0'/>
+			<body name='body2' pos='1 0 0' euler='0 0 0'>
+        <joint name='joint2' ref='0' type='hinge' stiffness='0' pos='0 0 0' axis='0 0 1'/>
+        <inertial pos='0.5 0 0' mass='1' diaginertia='1 1 1'/>        
+	  		<geom name='geom2' type='sphere' pos='0 0 0' material='JointColor' size='0.16' mass='0'/>
+  			<geom type='cylinder' fromto='0 0 0 1 0 0'   material='LimbColor'  size='0.08' mass='0'/>
+        <geom name='geom3' type='sphere' pos='1 0 0' material='JointColor' size='0.16' mass='0'/>        
+        <site name="site_end_effector" pos='1 0 0'/>
+      </body>
+    </body>
+
+    <body name="body_obstacle" pos="0 1.2 0" euler='0 0 0'>
+      <geom name='geom_obstacle' type='box' pos='0 0 0' material='JointColor' size='0.1 0.1 0.1' mass='1'/>
+    </body>
+
+  </worldbody>
+
+  <actuator>
+		  <motor joint='joint1' name='motor_joint1' forcelimited='false'/>
+		  <motor joint='joint2' name='motor_joint2' forcelimited='false'/>
+  </actuator>
+
+</mujoco>
