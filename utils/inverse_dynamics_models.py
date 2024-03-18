@@ -50,3 +50,16 @@ def get2DOF_dJ( q_arr, dq_arr ):
     dJ[1, 1] = -np.sin(q1 + q2)*(dq1 + dq2)
 
     return dJ
+
+def get2DOF_IK( p_arr ):
+
+    q_arr = np.zeros( 2 )
+
+    px = p_arr[ 0 ]
+    py = p_arr[ 1 ]
+
+    # Solve the inverse kinematics 
+    q_arr[ 1 ] = np.pi - np.arccos( np.clip( 0.5 * ( 2 - px ** 2 - py ** 2  ), -1, 1 ) )
+    q_arr[ 0 ] = np.arctan2( py, px ) - q_arr[ 1 ]/2     
+
+    return q_arr

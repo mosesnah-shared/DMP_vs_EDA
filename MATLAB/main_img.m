@@ -20,7 +20,7 @@ myFigureConfig( 'fontsize',  20, ...
 global c                                                                   
 c  = myColor(); 
 
-%% Figure 3: Goal-directed Discrete Movement in Joint-space
+%% (--) Figure 3: Goal-directed Discrete Movement in Joint-space
 % Figure 3 on the manuscript, Nah, Lachner and Hogan 2024
 % Robot Control based on Motor Primitives — A Comparison of Two Approaches
 clear data*; clc; close all;
@@ -76,12 +76,14 @@ xlabel( '$t$ (sec)', 'fontsize', 40 )
 
 mySaveFig( gcf, 'images/fig3' )
 
-%% Figure 4: Goal-directed Discrete Movement of EDA in Joint-space, sensitivity to Different Parameters
+%% (--) Figure 4: Goal-directed Discrete Movement of EDA in Joint-space, sensitivity to Different Parameters
 % Figure 4 on the manuscript, Nah, Lachner and Hogan 2024
 % Robot Control based on Motor Primitives — A Comparison of Two Approaches
+
+%% (--) ---- Figure 4a: Effect of Joint Stiffness
+
 clc; close all; clear data*
 fs = 40; lw2 = 5;
-
 % Folder name
 dir_name = '../main/example1_joint_discrete/data/';
 
@@ -167,9 +169,13 @@ set( gca, 'xlim', [ 0, 1.5 ], 'ylim', [0, 1.5], 'fontsize', fs  )
 
 mySaveFig( gcf, 'images/fig4a' )
 
-% ======================================= %
-% Figure 4b: Effect of Changing Damping
-% ======================================= %
+%% (--) ---- Figure 4b: Effect of Joint Damping
+
+clc; close all; clear data*
+fs = 40; lw2 = 5;
+% Folder name
+dir_name = '../main/example1_joint_discrete/data/';
+
 f = figure( );
 Bq = [ 10, 50, 150];
 Nb = length( Bq );
@@ -179,14 +185,13 @@ for i = 1 : Nk
     EDA_B{ i } = load( [ dir_name, 'EDA_Kq150_Bq', num2str( Bq(i) ), '.mat' ] );
 end
 
-
 subplot( 2, 3, 1 )
 hold on
 
 t_arr = EDA_B{ 1 }.t_arr;
 q_arr = EDA_B{ 1 }.q_arr( :, 1 );
 plot( t_arr, q_arr, 'linewidth', lw2,  'color', c.orange );
-plot( t_arr, EDA_K{ 1 }.q0_arr( :, 1 ), 'linewidth', 6, 'color', 'k', 'linestyle', ':' );
+plot( t_arr, EDA_B{ 1 }.q0_arr( :, 1 ), 'linewidth', 6, 'color', 'k', 'linestyle', ':' );
 ylabel( '$q_1(t)$ (rad)', 'fontsize', fs  )
 set( gca, 'xlim', [ 0, 1.5 ], 'ylim', [0, 1.5], 'fontsize', fs  )
 title( '$\mathbf{B}_q=10\mathbf{I}_2$', 'fontsize', fs  )
@@ -249,21 +254,117 @@ set( gca, 'xlim', [ 0, 1.5 ], 'ylim', [0, 1.5], 'fontsize', fs  )
 
 mySaveFig( gcf, 'images/fig4b' )
 
-%% Figure 5: Goal-directed Discrete Movement in Task-space
+%% (--) Figure 5: Goal-directed Discrete Movement in Task-space
+% Figure 5, subfigures on the manuscript, Nah, Lachner and Hogan 2024
+% Robot Control based on Motor Primitives — A Comparison of Two Approaches
 
-
-
-%% Figure 6: Goal-directed Discrete Movement of EDA in Task-space, sensitivity to Different Parameters
+%% (--) ---- Figure 5a: Goal-directed, without Stretch
 
 clc; close all; clear data*
-fs = 40; lw1 = 6; lw2 = 5;
+fs = 40;
 
 % Folder name
 dir_name = '../main/example2_task_discrete/data/';
 
-% ======================================= %
-% Figure 4a: Effect of Changing Stiffness
-% ======================================= %
+% =============================== Motor Primitives ==================================== %
+data_DMP = load( [ dir_name, 'DMP.mat' ] );
+data_EDA = load( [ dir_name, 'EDA_Kp60_Bp20.mat' ] );
+
+% Saving the start and end positions
+% Get the start and end of movements
+g_start = data_EDA.p0_arr(    1, : );
+g_end   = data_EDA.p0_arr( end, : );
+
+% ======================================================================== %
+% Plot1: Dynamic Movement Primitives
+subplot( 1, 2, 1 )
+hold on 
+
+% Get the x, y position of the joints 
+q_abs = cumsum( data_DMP.q_arr , 2 );
+x_arr = cumsum( cos( q_abs ), 2 );
+y_arr = cumsum( sin( q_abs ), 2 );
+
+alpha_arr = [0.2, 0.3, 0.3, 1.0];
+idx_arr   = [1, 400, 600, 2000];
+
+for i = 1 : length( idx_arr )
+    idx = idx_arr( i );
+    alpha = alpha_arr( i );
+    scatter( [ 0, x_arr( idx, 1:end-1 ) ], [ 0, y_arr( idx, 1:end-1 ) ], 400, 'markerfacecolor', c.black, 'markeredgecolor', c.black, 'MarkerFaceAlpha', alpha,'MarkerEdgeAlpha',alpha  )
+    p2 = plot( [ 0, x_arr( idx, : ) ], [ 0, y_arr( idx, : ) ], 'color', c.black, 'linewidth', 4 );
+    p2.Color( 4 ) = alpha;
+    scatter( x_arr( idx, end ), y_arr( idx, end),  1200,  'markerfacecolor', c.blue, 'markeredgecolor', c.black, 'MarkerFaceAlpha', alpha,'MarkerEdgeAlpha',alpha  )
+end
+
+plot( x_arr( :, 2 ), y_arr( :, 2 ), 'linewidth', 8, 'color', c.blue )
+plot( data_DMP.p_des( 1, : ), data_DMP.p_des( 2, : ), 'linewidth', 4, 'color', c.black, 'linestyle',  '--' )
+
+% Start and End Location
+scatter( 0, g_start( 2 ), 300, 'o', 'markerfacecolor', c.pink_sunset, 'markeredgecolor', c.black, 'markerfacealpha', 1.0 )
+scatter( 0,   g_end( 2 ), 300, 'square', 'markerfacecolor', c.white, 'markeredgecolor', c.black, 'markerfacealpha', 1.0 )
+
+text( -0.75, g_start( 2 ), 'Start $\mathbf{p}_i$' , 'fontsize', fs)
+text( -0.75, g_end( 2 ), 'Goal $\mathbf{g}$'   , 'fontsize', fs )
+
+xlabel( '$X$ (m)', 'fontsize', fs );
+ylabel( '$Y$ (m)', 'fontsize', fs )
+axis equal
+
+set( gca, 'xlim', [-1.1, 1.1] , 'ylim', [-0.2, 2.4], 'xtick', [-1.0, 0.0, 1.0], 'ytick', [0.0, 1.0, 2.0], 'fontsize', 1.2*fs ) 
+
+% ======================================================================== %
+% Plot2: Elementary Dynamic Actions
+subplot( 1, 2, 2)
+hold on
+
+alpha_arr = [0.2, 0.3, 0.3, 1.0];
+idx_arr   = [1, 400, 600, 2000];
+
+% Get the x, y position of the joints 
+q_abs = cumsum( data_EDA.q_arr , 2 );
+x_arr = cumsum( cos( q_abs ), 2 );
+y_arr = cumsum( sin( q_abs ), 2 );
+
+
+for i = 1 : length( idx_arr )
+    idx = idx_arr( i );
+    alpha = alpha_arr( i );
+    scatter( [ 0, x_arr( idx, 1:end-1 ) ], [ 0, y_arr( idx, 1:end-1 ) ], 400, 'markerfacecolor', c.black, 'markeredgecolor', c.black, 'MarkerFaceAlpha', alpha,'MarkerEdgeAlpha',alpha  )
+    p2 = plot( [ 0, x_arr( idx, : ) ], [ 0, y_arr( idx, : ) ], 'color', c.black, 'linewidth', 4 );
+    p2.Color( 4 ) = alpha;
+    scatter( x_arr( idx, end ), y_arr( idx, end),  1200,  'markerfacecolor', c.orange, 'markeredgecolor', c.black, 'MarkerFaceAlpha', alpha,'MarkerEdgeAlpha',alpha  )
+
+end
+plot( data_EDA.p_arr(  :, 1 ) , data_EDA.p_arr( :, 2 ), 'linewidth', 8, 'color', c.orange )
+plot( data_EDA.p0_arr( :, 1 ), data_EDA.p0_arr( :, 2 ), 'linewidth', 4, 'color', c.black, 'linestyle',  '--' )
+
+% Start and End Location
+scatter( 0, g_start( 2 ), 300, 'o', 'markerfacecolor', c.pink_sunset, 'markeredgecolor', c.black, 'markerfacealpha', 1.0 )
+scatter( 0,   g_end( 2 ), 300, 'square', 'markerfacecolor', c.white, 'markeredgecolor', c.black, 'markerfacealpha', 1.0 )
+
+text( -0.75, g_start( 2 ), 'Start $\mathbf{p}_i$' , 'fontsize', fs)
+text( -0.75, g_end( 2 ), 'Goal $\mathbf{g}$'   , 'fontsize', fs )
+
+xlabel( '$X$ (m)', 'fontsize', fs )
+axis equal
+set( gca, 'xlim', [-1.1, 1.1] , 'ylim', [-0.2, 2.4], 'xtick', [-1.0, 0.0, 1.0], 'ytick', [0.0, 1.0, 2.0], 'fontsize', 1.2*fs ) 
+
+mySaveFig( gcf, 'images/fig5a' )
+
+%% (--) ---- Figure 5b: Goal-directed, Stretched
+
+
+%% (--) Figure 6: Goal-directed Discrete Movement of EDA in Task-space, sensitivity to Different Parameters
+
+%% (--) ---- Figure 6b: Effect of Translational Stiffness
+
+clc; close all; clear data*
+fs = 40; lw2 = 5;
+% Folder name
+dir_name = '../main/example2_task_discrete/data/';
+
+
 Kp = [ 20, 60, 300 ];
 Nk = length( Kp );
 EDA_K = cell( 1, Nk );
@@ -334,9 +435,13 @@ ylabel( '$Y$ (m)', 'fontsize', fs  )
 
 mySaveFig( gcf, 'images/fig6a' )
 
-% ======================================= %
-% Figure 4b: Effect of Changing Damping
-% ======================================= %
+%% (--) ---- Figure 6b: Effect of Translational Damping
+
+clc; close all; clear data*
+fs = 40; lw2 = 5;
+% Folder name
+dir_name = '../main/example2_task_discrete/data/';
+
 f = figure( ); a = axes( 'parent', f );
 Bq = [ 10, 20, 60];
 Nb = length( Bq );

@@ -159,10 +159,6 @@ g  = pf
 
 # Assuming fs.calc_forcing_term and trans_sys.rollout are properly defined Python methods
 input_arr_discrete = fd.calc_forcing_term( t_arr[:-1], weight, t0, np.diag( g - y0 ), trimmed = True )
-p_arr, _, dp_arr, dz_arr = trans_sys.rollout( y0, z0, g, input_arr_discrete, t0, t_arr )
-
-# dz_arr can be used to derived acceleration
-ddp_arr = dz_arr/sd.tau
 
 # We now know the y_arr, dy_arr and ddy_arr for the inverse dynamics model 
 # These are the position, velocity, and acceleration of the task-space end-effector's coordinates.
@@ -197,6 +193,10 @@ while data.time <= T:
 
     # Conducting the Inverse Kinematics
     # Step 1: For joint-position
+
+    # Conducting the Rollout
+
+
     q_arr  = get2DOF_IK( p_arr[ :, n_sim ] )
 
     # Step 2: For joint-velocity 
