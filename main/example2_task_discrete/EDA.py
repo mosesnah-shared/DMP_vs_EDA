@@ -48,7 +48,7 @@ data.qpos[ 0:nq ] = q_init
 mujoco.mj_forward( model, data )
 
 # The task-space impedances of the 2-DOF robot 
-kp = 60
+kp = 300
 bp = 20
 Kp = kp * np.eye( 3 )
 Bp = bp * np.eye( 3 )
@@ -67,7 +67,7 @@ Jp = np.zeros( ( 3, nq ) )
 Jr = np.zeros( ( 3, nq ) )
 
 # The parameters of the minimum-jerk trajectory.
-t0   = 0.3       
+t0   = 0.0       
 pdel = np.array( [ 0.0, 1.2, 0.0 ] )
 pi   = np.copy( p )
 pf   = pi + pdel
@@ -86,7 +86,7 @@ Jp_mat  = [ ]
 # Flags
 is_save = True      # To save the data
 is_view = True      # To view the simulation
-is_sing = True      # If you turn on singularity to be out of reach
+is_sing = False      # If you turn on singularity to be out of reach
 
 if is_sing:
     pf[ 1 ] = 2.0   # Note that the total length of the robot is 2, i.e., fully streched configuration

@@ -9,7 +9,7 @@ from pathlib  import Path
 ROOT_PATH = str( Path( __file__ ).parent.parent.parent )
 sys.path.append( ROOT_PATH )
 
-# Also save the CURRENT PATH of this File
+# Also save the CURRENT PATH of this File, for saving the data
 CURRENT_PATH = str( Path( __file__ ).parent )
 
 # Importing the Minimum-jerk Trajectory Function
@@ -25,13 +25,13 @@ model      = mujoco.MjModel.from_xml_path( dir_name + robot_name )
 data       = mujoco.MjData( model )
 viewer     = mujoco_viewer.MujocoViewer( model, data, hide_menus = True )
 
-# Parameters for the simulation
-T        = 3.                       # Total Simulation Time
+# Parameters for the main simulation
+T        = 3.                       # Total simulation time
 dt       = model.opt.timestep       # Time-step for the simulation (set in xml file)
-fps      = 30                       # Frames per second
+fps      = 30                       # Frames per second, for visualization
 save_ps  = 1000                     # Hz for saving the data
 n_frames = 0                        # The number of current frame of the simulation
-n_saves  = 0                        # Update for the saving point
+n_saves  = 0                        # The number of saved data
 speed    = 1.0                      # The speed of the simulator
 
 t_update = 1./fps     * speed       # Time for update 
@@ -40,14 +40,15 @@ t_save   = 1./save_ps * speed       # Time for saving the data
 # The time-step defined in the xml file should be smaller than the update rates
 assert( dt <= min( t_update, t_save ) )
 
-# Setting the initial position of the robot.
+# Setting the initial configuration of the robot
+# For this simulation, it is fully stretched to the right
 nq     = model.nq
 q_init = np.zeros( nq )
 data.qpos[ 0:nq ] = q_init
 mujoco.mj_forward( model, data )
 
 # The joint-impedances of the 2-DOF robot 
-# Can try any values that you want.
+# Can try any values that you want!
 kq = 150
 bq =  50
 Kq = kq * np.eye( nq )
@@ -78,8 +79,6 @@ is_view = True      # To view the simulation
 # The main simulation loop
 while data.time <= T:
 
-    mujoco.mj_step( model, data )
-
     # Get the virtual joint trajectory's position and velocity. 
     q0, dq0, _ = min_jerk_traj( data.time, t0, t0 + D, qi, qf )
 
@@ -105,7 +104,11 @@ while data.time <= T:
         dq_mat.append(  np.copy( dq  ) )
         dq0_mat.append( np.copy( dq0 ) )
 
-# Save Data as mat file for MATLAB visualization
+    # Running the first-step for the Simulation
+    mujoco.mj_step( model, data )
+
+# Save data as mat file for MATLAB visualization
+# Saved under ./data directory
 if is_save:
     data_dic = { "t_arr": t_mat, "q_arr": q_mat, "q0_arr": q0_mat, "dq_arr": dq_mat, "dq0_arr": dq0_mat, "Kq": Kq, "Bq": Bq }
     savemat( CURRENT_PATH + "/data/EDA_Kq" + f"{kq}".replace('.', 'p') + "_Bq" + f"{bq}".replace('.', 'p') + ".mat", data_dic )
