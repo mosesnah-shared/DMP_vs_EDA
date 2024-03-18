@@ -20,7 +20,7 @@ np.set_printoptions( precision = 4, threshold = 9, suppress = True )
 
 # Basic MuJoCo setups
 dir_name   = ROOT_PATH + '/models/'
-robot_name = '2DOF_planar_torque_w_obstacle.xml'
+robot_name = '2DOF_planar_torque.xml'
 model      = mujoco.MjModel.from_xml_path( dir_name + robot_name )
 data       = mujoco.MjData( model )
 viewer     = mujoco_viewer.MujocoViewer( model, data, hide_menus = True )
@@ -61,11 +61,6 @@ dq = data.qvel[ 0:nq ]
 EE_site = "site_end_effector"
 id_EE = model.site( EE_site ).id
 
-# Getting the obstacle's ID and reference for displacement
-obs_name = "body_obstacle"
-id_obs = model.body( "body_obstacle").id
-p_obs  = model.body_pos[ id_obs ]
-
 # Saving the references 
 p  = data.site_xpos[ id_EE ]
 Jp = np.zeros( ( 3, nq ) )
@@ -78,6 +73,9 @@ pi   = np.copy( p )
 pf   = pi + pdel
 D    = 1.0
 
+# The obstacle location
+o = np.array( [ -0.001, 0.5 * ( pi[ 1 ] + pf[ 1 ] ), 0 ] )
+
 # The data for mat save
 t_mat     = [ ]
 q_mat     = [ ] 
@@ -87,18 +85,10 @@ dq_mat    = [ ]
 dp_mat    = [ ] 
 dp0_mat   = [ ] 
 Jp_mat    = [ ]
-gain_mat  = [ ]
-p_obs_mat = [ ]
  
 # Flags
 is_save = True      # To save the data
 is_view = True      # To view the simulation
-is_mod  = True      # Modulation of energy on
-
-# The Kinetic and Potential Energy of the robot
-KE   = 0.
-PE   = 0.
-Lmax = 2.5
 
 # The main simulation loop
 while data.time <= T:
@@ -111,35 +101,20 @@ while data.time <= T:
     mujoco.mj_jacSite( model, data, Jp, Jr, id_EE )
     dp = Jp @ dq
 
-    if is_mod:
-        # Calculate the Kinematic Energy of the Robot
-        Mmat = np.zeros( ( model.nq, model.nq ) )
-        mujoco.mj_fullM( model, Mmat, data.qM )
-        KE = 0.5*dq.T @ Mmat @ dq
-        PE = 0.5*( p - p0 ).T @ Kp @ ( p - p0 )
-        Etot = KE + PE
+    # The displacement between the current position and obstacle 
+    delta_x = p - o
 
-        # Get lambda 
-        if Etot <= Lmax:
-            gain = 1.0
-        else:
-            gain = np.max( ( 0, ( Lmax-KE )/PE ) )
+    # Getting the radial displacement 
+    r2 = np.linalg.norm( delta_x , ord = 2 ) 
 
-    else:
-        # Torque 1: First-order Joint-space Impedance Controller
-        # Without Energy monitoring and modulation. 
-        gain = 1.
+    # Module 1: Task-space control
+    tau_imp1 = Jp.T @ ( Kp @ ( p0 - p ) + Bp @ ( dp0 - dp ) )
 
-    tau_imp = Jp.T @ ( Kp @ ( p0 - p ) + Bp @ ( dp0 - dp ) )
-    tau_imp *= gain
+    # Module 2: Obstacle Avoidance
+    tau_imp2 = Jp.T @ ( 0.1 * ( ( 1. / r2 ) ** 6 )  * delta_x  )
 
     # Adding the Torque as an input
-    data.ctrl[ : ] = tau_imp
-
-    # Moving the obstacle, when time between 1. and 2.
-    if data.time >= 1.0 and data.time <= 2.0:
-        # Move the obstacle to a new position 
-        p_obs -= np.array( [ 0.0005, 0.0, 0.0] )    
+    data.ctrl[ : ] = tau_imp1 + tau_imp2
 
     # Update Visualization
     if ( ( n_frames != ( data.time // t_update ) ) and is_view ):
@@ -159,19 +134,13 @@ while data.time <= T:
         dp_mat.append(    np.copy(  dp   ) )
         dp0_mat.append(   np.copy(  dp0  ) )    
         Jp_mat.append(    np.copy(  Jp   ) )
-        p_obs_mat.append( np.copy( p_obs ) )
-        gain_mat.append(  np.copy( gain  ) )
 
 # Save Data as mat file for MATLAB visualization
 if is_save:
-    data_dic = { "t_arr": t_mat, "q_arr": q_mat, "p_arr": p_mat, "dp_arr": dp_mat, "gain_arr": gain_mat , "p_obs_arr": p_obs_mat,
+    data_dic = { "t_arr": t_mat, "q_arr": q_mat, "p_arr": p_mat, "dp_arr": dp_mat, 
                  "p0_arr": p0_mat, "dq_arr": dq_mat, "dp0_arr": dp0_mat, "Kp": Kp, "Bq": Bp, "Jp_arr": Jp_mat }
     
-    if is_mod:
-        savemat( CURRENT_PATH + "/data/EDA_w_modulation.mat", data_dic )
-    else:
-        savemat( CURRENT_PATH + "/data/EDA_wo_modulation.mat", data_dic )
-
+    savemat( CURRENT_PATH + "/data/EDA.mat", data_dic )
 
 if is_view:            
     viewer.close()

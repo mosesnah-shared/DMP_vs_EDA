@@ -26,7 +26,7 @@ data       = mujoco.MjData( model )
 viewer     = mujoco_viewer.MujocoViewer( model, data, hide_menus = True )
 
 # Parameters for the simulation
-T        = 3.                       # Total Simulation Time
+T        = 10.0                     # Total Simulation Time
 dt       = model.opt.timestep       # Time-step for the simulation (set in xml file)
 fps      = 30                       # Frames per second
 save_ps  = 1000                     # Hz for saving the data
@@ -42,7 +42,10 @@ assert( dt <= min( t_update, t_save ) )
 
 # Setting the initial position of the robot.
 nq     = model.nq
-q_init = np.zeros( nq )
+q_init = np.array( [ 0.5, 0.5 ] )
+q_amp  = np.array( [ 0.1, 0.3 ] )
+w0     = np.pi 
+
 data.qpos[ 0:nq ] = q_init
 mujoco.mj_forward( model, data )
 
@@ -52,13 +55,6 @@ kq = 150
 bq =  50
 Kq = kq * np.eye( nq )
 Bq = bq * np.eye( nq )
-
-# The parameters of the minimum-jerk trajectory.
-t0   = 0.3                          # Starting time
-D    = 1.0                          # Duration of the movement
-qdel = np.array( [ 1.0, 1.0 ] )     # q_delta
-qi   = q_init                       # Initial (virtual) joint posture
-qf   = q_init + qdel                #   Final (virtual) joint posture
 
 # Save the references for the q and dq 
 q  = data.qpos[ 0:nq ]
@@ -80,8 +76,8 @@ while data.time <= T:
 
     mujoco.mj_step( model, data )
 
-    # Get the virtual joint trajectory's position and velocity. 
-    q0, dq0, _ = min_jerk_traj( data.time, t0, t0 + D, qi, qf )
+    q0  = q_init + q_amp * np.sin( w0 * data.time )
+    dq0 =     q_amp * w0 * np.cos( w0 * data.time )
 
     # Module 1: First-order Joint-space Impedance Controller
     tau_imp = Kq @ ( q0 - q ) + Bq @ ( dq0 - dq )
@@ -108,7 +104,7 @@ while data.time <= T:
 # Save Data as mat file for MATLAB visualization
 if is_save:
     data_dic = { "t_arr": t_mat, "q_arr": q_mat, "q0_arr": q0_mat, "dq_arr": dq_mat, "dq0_arr": dq0_mat, "Kq": Kq, "Bq": Bq }
-    savemat( CURRENT_PATH + "/data/EDA_Kq" + f"{kq}".replace('.', 'p') + "_Bq" + f"{bq}".replace('.', 'p') + ".mat", data_dic )
+    savemat( CURRENT_PATH + "/data/EDA_joint_rhythmic.mat", data_dic )
     # Substitute . in float as p for readability.
 
 if is_view:            
