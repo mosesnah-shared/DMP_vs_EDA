@@ -265,6 +265,9 @@ while data.time <= T:
     mujoco.mj_step( model, data )
     n_sim += 1
 
+# ========================================================================================== #
+# [Section #5] Save and Close
+# ========================================================================================== #
 # Save data as mat file for MATLAB visualization
 # Saved under ./data directory
 if is_save:
