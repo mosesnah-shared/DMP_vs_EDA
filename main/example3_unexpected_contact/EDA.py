@@ -1,3 +1,26 @@
+# ========================================================================================== #
+#  [Script Name]: EDA.py under example3_unexpected_contact
+#       [Author]: Moses Chong-ook Nah
+#      [Contact]: mosesnah@mit.edu
+# [Date Created]: 2024.03.18
+#  [Description]: Simulation using Elementary Dynamic Actions (EDA)
+#                 Discrete movement in task-space, with unexpected physical contact
+#                 This example highlights the benefit of EDA, even regulating the 
+#                 dynamics of physical interaction.
+#   
+#                 This .py file is for running/generating Figures 7 and 8 of the 
+#                 following manuscript from Nah, Lachner and Hogan
+#                 "Robot Control based on Motor Primitives — A Comparison of Two Approaches" 
+#
+#                 The code is exhaustive in details, so that people can really try out the 
+#                 demonstrations by themselves!
+#                 "Code is read more often than it is written" - Guido Van Rossum
+# ========================================================================================== #
+
+# ========================================================================================== #
+# [Section #1] Imports and Enviromental SETUPS
+# ========================================================================================== #
+
 import sys
 import numpy as np
 import mujoco
@@ -18,6 +41,10 @@ from utils.trajectory  import min_jerk_traj
 # Set numpy print options
 np.set_printoptions( precision = 4, threshold = 9, suppress = True )
 
+# ========================================================================================== #
+# [Section #2] Basic MuJoCo Setups
+# ========================================================================================== #
+
 # Basic MuJoCo setups
 dir_name   = ROOT_PATH + '/models/'
 robot_name = '2DOF_planar_torque_w_obstacle.xml'
@@ -33,7 +60,6 @@ save_ps  = 1000                     # Hz for saving the data
 n_frames = 0                        # The number of current frame of the simulation
 n_saves  = 0                        # Update for the saving point
 speed    = 1.0                      # The speed of the simulator
-
 t_update = 1./fps     * speed       # Time for update 
 t_save   = 1./save_ps * speed       # Time for saving the data
 
@@ -47,29 +73,27 @@ q_init = np.array( [ q1, np.pi-2*q1 ] )
 data.qpos[ 0:nq ] = q_init
 mujoco.mj_forward( model, data )
 
+# ========================================================================================== #
+# [Section #3] Parameters for Elementary Dynamic Actions
+# ========================================================================================== #
+
 # The task-space impedances of the 2-DOF robot 
 kp = 60
 bp = 20
 Kp = kp * np.eye( 3 )
 Bp = bp * np.eye( 3 )
 
-# Save the references for the q and dq 
-q  = data.qpos[ 0:nq ]
-dq = data.qvel[ 0:nq ]
-
 # Get the end-effector's ID and its position, translational and rotational Jacobian matrices
 EE_site = "site_end_effector"
-id_EE = model.site( EE_site ).id
+id_EE   = model.site( EE_site ).id
+p       = data.site_xpos[ id_EE ]
+Jp      = np.zeros( ( 3, nq ) )
+Jr      = np.zeros( ( 3, nq ) )
 
-# Getting the obstacle's ID and reference for displacement
+# Getting the obstacle's ID and reference for later displacement
 obs_name = "body_obstacle"
-id_obs = model.body( "body_obstacle").id
+id_obs = model.body( "body_obstacle" ).id
 p_obs  = model.body_pos[ id_obs ]
-
-# Saving the references 
-p  = data.site_xpos[ id_EE ]
-Jp = np.zeros( ( 3, nq ) )
-Jr = np.zeros( ( 3, nq ) )
 
 # The parameters of the minimum-jerk trajectory.
 t0   = 0.3       
@@ -77,6 +101,14 @@ pdel = np.array( [ 0.0, 1.2, 0.0 ] )
 pi   = np.copy( p )
 pf   = pi + pdel
 D    = 1.0
+
+# ========================================================================================== #
+# [Section #4] Main Simulation
+# ========================================================================================== #
+
+# Save the references for the q and dq 
+q  = data.qpos[ 0:nq ]
+dq = data.qvel[ 0:nq ]
 
 # The data for mat save
 t_mat     = [ ]
@@ -93,9 +125,9 @@ p_obs_mat = [ ]
 # Flags
 is_save = True      # To save the data
 is_view = True      # To view the simulation
-is_mod  = True      # Modulation of energy on
+is_mod  = False     # Impedance Modulation On or OFF
 
-# The Kinetic and Potential Energy of the robot
+# The Kinetic (KE) and Potential Energy (PE) of the robot
 KE   = 0.
 PE   = 0.
 Lmax = 2.5
@@ -103,23 +135,28 @@ Lmax = 2.5
 # The main simulation loop
 while data.time <= T:
 
-    mujoco.mj_step( model, data )
-
+    # The virtual trajectory of the robot's end-effector
     p0, dp0, _ = min_jerk_traj( data.time, t0, t0 + D, pi, pf )
     
-    # Getting the Jacobian matrices, translational part
+    # Getting the Jacobian matrices and the end-effector's velocity. 
     mujoco.mj_jacSite( model, data, Jp, Jr, id_EE )
     dp = Jp @ dq
 
+    # If with Energy Modulation
     if is_mod:
-        # Calculate the Kinematic Energy of the Robot
+
+        # The Kinematic Energy of the Robot
         Mmat = np.zeros( ( model.nq, model.nq ) )
         mujoco.mj_fullM( model, Mmat, data.qM )
         KE = 0.5*dq.T @ Mmat @ dq
+
+        # The Potential Energy of the Robot
         PE = 0.5*( p - p0 ).T @ Kp @ ( p - p0 )
+
+        # Total Energy of the robot
         Etot = KE + PE
 
-        # Get lambda 
+        # Get lambda (or gain) for modulation 
         if Etot <= Lmax:
             gain = 1.0
         else:
@@ -130,11 +167,15 @@ while data.time <= T:
         # Without Energy monitoring and modulation. 
         gain = 1.
 
+    # First-order Task-space Impedance control
     tau_imp = Jp.T @ ( Kp @ ( p0 - p ) + Bp @ ( dp0 - dp ) )
     tau_imp *= gain
 
-    # Adding the Torque as an input
+    # Command the Torque input
     data.ctrl[ : ] = tau_imp
+
+    # Update simulation
+    mujoco.mj_step( model, data )
 
     # Moving the obstacle, when time between 1. and 2.
     if data.time >= 1.0 and data.time <= 2.0:
@@ -162,7 +203,12 @@ while data.time <= T:
         p_obs_mat.append( np.copy( p_obs ) )
         gain_mat.append(  np.copy( gain  ) )
 
+# ========================================================================================== #
+# [Section #5] Save and Close
+# ========================================================================================== #
 # Save Data as mat file for MATLAB visualization
+# Saved under ./data directory
+        
 if is_save:
     data_dic = { "t_arr": t_mat, "q_arr": q_mat, "p_arr": p_mat, "dp_arr": dp_mat, "gain_arr": gain_mat , "p_obs_arr": p_obs_mat,
                  "p0_arr": p0_mat, "dq_arr": dq_mat, "dp0_arr": dp0_mat, "Kp": Kp, "Bq": Bp, "Jp_arr": Jp_mat }

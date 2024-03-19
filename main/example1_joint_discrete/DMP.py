@@ -44,7 +44,6 @@ from DMPmodules.transformation_system   import TransformationSystem
 # Set numpy print options
 np.set_printoptions( precision = 4, threshold = 9, suppress = True )
 
-
 # ========================================================================================== #
 # [Section #2] Basic MuJoCo Setups
 # ========================================================================================== #
@@ -95,7 +94,7 @@ P      = 100                        # Number of Sample points for the demonstrat
 az     = 10.0                       # Coefficient for the Transformation System
 bz     =  2.5                       # Coefficient for the Transformation System
 y0d    = qi                         # Initial Position of the demonstrated trajectory
-gd     = qf                         #   cGoal Position of the demonstrated trajectory
+gd     = qf                         #    Goal Position of the demonstrated trajectory
 
 # Defining the Three elements of DMP
 sd        = CanonicalSystem( 'discrete', D, alphas )
@@ -176,7 +175,7 @@ sd.tau = tau        # Setting the same movement duration with the demonstrated t
 input_arr_discrete = fd.calc_forcing_term( t_arr[:-1], weight, t0, np.diag( g - y0 ), trimmed = True )
 y_arr, _, dy_arr, dz_arr = trans_sys.rollout( y0, z0, g, input_arr_discrete, t0, t_arr )
 
-# dz_arr can be used to derive the acceleartion
+# dz_arr can be used to derive the acceleration
 ddy_arr = dz_arr/sd.tau
 
 # ========================================================================================== #

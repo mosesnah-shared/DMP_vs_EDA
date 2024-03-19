@@ -38,7 +38,6 @@ from utils.trajectory  import min_jerk_traj
 # Set numpy print options
 np.set_printoptions( precision = 4, threshold = 9, suppress = True )
 
-
 # ========================================================================================== #
 # [Section #2] Basic MuJoCo Setups
 # ========================================================================================== #
