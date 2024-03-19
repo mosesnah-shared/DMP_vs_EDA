@@ -26,7 +26,7 @@ np.set_printoptions( precision = 4, threshold = 9, suppress = True )
 
 # Basic MuJoCo setups
 dir_name   = ROOT_PATH + '/models/'
-robot_name = '2DOF_planar_torque_w_obstacle.xml'
+robot_name = '2DOF_planar_torque.xml'
 model      = mujoco.MjModel.from_xml_path( dir_name + robot_name )
 data       = mujoco.MjData( model )
 viewer     = mujoco_viewer.MujocoViewer( model, data, hide_menus = True )
@@ -68,7 +68,7 @@ Jr = np.zeros( ( 3, nq ) )
 
 
 # The parameters of the minimum-jerk trajectory.
-t0   = 0.0       
+t0   = 0.    
 pdel = np.array( [ 0.0, 1.2, 0.0 ] )
 pi   = np.copy( p )
 pf   = pi + pdel
@@ -160,6 +160,8 @@ g  = pf
 # Assuming fs.calc_forcing_term and trans_sys.rollout are properly defined Python methods
 input_arr_discrete = fd.calc_forcing_term( t_arr[:-1], weight, t0, np.diag( g - y0 ), trimmed = True )
 
+# Append in front a zero forcing term for size-reasoning
+
 # We now know the y_arr, dy_arr and ddy_arr for the inverse dynamics model 
 # These are the position, velocity, and acceleration of the task-space end-effector's coordinates.
 
@@ -167,17 +169,13 @@ input_arr_discrete = fd.calc_forcing_term( t_arr[:-1], weight, t0, np.diag( g - 
 q  = data.qpos[ 0:nq ]
 dq = data.qvel[ 0:nq ]
 
-# Getting the obstacle's ID and reference for displacement
-obs_name = "body_obstacle"
-id_obs = model.body( "body_obstacle").id
-p_obs  = model.body_pos[ id_obs ]
+# The obstacle location
+o = np.array( [ -0.001, 0.5 * ( pi[ 1 ] + pf[ 1 ] ), 0 ] )
 
 # The data for mat save
 t_mat   = [ ]
 q_mat   = [ ] 
-q0_mat  = [ ] 
 dq_mat  = [ ] 
-dq0_mat = [ ] 
 
 # Other Flags
 is_save = True     # To save the data
@@ -186,8 +184,11 @@ is_PD   = False    # With joint-space PD Stabilization
 
 # ========================================================================================== #        
 # The Main Simulation
-
 n_sim = 0
+
+# Conduct DMP rollout
+y_old = pi
+z_old = np.zeros( 2 )
 
 while data.time <= T:
 
@@ -195,9 +196,28 @@ while data.time <= T:
     # Step 1: For joint-position
 
     # Conducting the Rollout
+    # Calculate the Coupling term 
+    # Getting the Jacobian matrices, translational part
+    mujoco.mj_jacSite( model, data, Jp, Jr, id_EE )
+    dp = Jp @ dq
 
+    theta = np.arccos( np.inner( o - p, dp  ) / ( np.linalg.norm( o - p ) * np.linalg.norm( dp )  )   )
+    R = np.array( [ [ 0, 1, 0 ], [ -1, 0, 0 ], [0 ,0, 1 ] ] )            
 
-    q_arr  = get2DOF_IK( p_arr[ :, n_sim ] )
+    # If tmp_dp is a zero vector, then halt the simulation 
+    Cp = 300 * R @ dp * np.exp( -3 * theta ) if np.sum( dp ) != 0 else np.zeros( 3 )
+
+    if n_sim == 0:
+        y_new, z_new, dy, dz = trans_sys.step( y_old, z_old, g, Cp[ :2 ], dt )
+    else:
+        y_new, z_new, dy, dz = trans_sys.step( y_old, z_old, g, input_arr_discrete[ :, n_sim-1] + Cp[ :2 ], dt )
+
+    # The position, velocity and acceleration of task-space 
+    p_arr   = y_new
+    dp_arr  = dy
+    ddp_arr = dz/tau
+
+    q_arr  = get2DOF_IK( p_arr )
 
     # Step 2: For joint-velocity 
     # Inverse of Jacobian.
@@ -205,11 +225,11 @@ while data.time <= T:
     tmp_Jp = get2DOF_J( q_arr )
     tmp_Jinv = np.linalg.inv( tmp_Jp ) 
 
-    dq_arr = tmp_Jinv @ dp_arr[ :, n_sim ]
+    dq_arr = tmp_Jinv @ dp_arr
 
     # Step 3: For joint-acceleration 
     tmp_dJp = get2DOF_dJ( q_arr, dq_arr )
-    ddq_arr = tmp_Jinv @ ( ddp_arr[ :, n_sim ] - tmp_dJp @ dq_arr )
+    ddq_arr = tmp_Jinv @ ( ddp_arr - tmp_dJp @ dq_arr )
 
     # Input 
     # to the Inverse Dynamics Model
@@ -218,18 +238,8 @@ while data.time <= T:
     tmpC = get2DOF_C( q_arr, dq_arr )
     tau_input = tmpM @ ddq_arr + tmpC @ dq_arr
 
-    if is_PD:
-        tau_PD = 50 * ( q_arr - q ) + 30 * ( dq_arr - dq )
-    else:
-        tau_PD   = np.zeros( nq )    
-
     # Adding the Torque as an input
-    data.ctrl[ : ] = tau_input + tau_PD
-
-    # Moving the obstacle, when time between 1. and 2.
-    if data.time >= 1.0 and data.time <= 2.0:
-        # Move the obstacle to a new position 
-        p_obs -= np.array( [ 0.0005, 0.0, 0.0] )    
+    data.ctrl[ : ] = tau_input 
 
     # Update Visualization
     if ( ( n_frames != ( data.time // t_update ) ) and is_view ):
@@ -249,15 +259,15 @@ while data.time <= T:
     mujoco.mj_step( model, data )
     n_sim += 1
 
+    y_old = y_new
+    z_old = z_new
+
 # Save data as mat file for MATLAB visualization
 # Saved under ./data directory
 if is_save:
     data_dic = { "t_arr": t_mat, "q_arr": q_mat, "dq_arr": dq_mat, "p_des": p_arr, "dp_des": dp_arr, "ddp_des": ddp_arr, "t_des": t_arr, "alphas": alphas, "az":az, "bz":bz, "N": N, "P": P }
     
-    if is_PD:
-        savemat( CURRENT_PATH + "/data/DMP_PD.mat", data_dic ) 
-    else:
-        savemat( CURRENT_PATH + "/data/DMP.mat", data_dic )         
+    savemat( CURRENT_PATH + "/data/DMP.mat", data_dic )         
         
 
 if is_view:            

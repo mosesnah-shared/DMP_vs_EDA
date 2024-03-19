@@ -1,6 +1,6 @@
 <mujoco model="iiwa14">
 
-	<option timestep='0.0001' iterations='50' integrator='Euler' collision='all' gravity="0 0 0"/>
+	<option timestep='0.0001' iterations='50' integrator='Euler' gravity="0 0 0"/>
 
 
     <asset>
@@ -55,12 +55,15 @@
                                 <geom type="mesh" contype="0" conaffinity="0" group="1" rgba="0.4 0.4 0.4 1" name="iiwa14_link_5_visual" mesh="iiwa14_link_5_vis" />
                                 <geom type="mesh" contype="0" rgba="0.4 0.4 0.4 1" mesh="iiwa14_link_5" name="iiwa14_link_5_collision" />
                                 <body name="iiwa14_link_6" pos="0 0 0.2155" quat="0.707107 0.707107 0 0">
+                                    <site    pos="0 0 0.00" name="link6_start" />
                                     <inertial pos="0 0.0006 0.0004" quat="0.996112 0.088097 0 0" mass="2.3466" diaginertia="0.006509 0.00631585 0.00447015" />
                                     <site     pos="0 0.0006 0.0004" quat="0.996112 0.088097 0 0" name="link6_COM" />
+                                    <site     pos="0 0.040 0.0004"  quat="0.707107 -0.707107 0 0" name="link6_COM2" />
                                     <joint name="iiwa14_joint_6" pos="0 0 0" axis="0 0 1" limited="false" range="-2.0944 2.0944" damping="0.0" />
                                     <geom type="mesh" contype="0" conaffinity="0" group="1" mesh="iiwa14_link_6_vis" name="iiwa14_link_6_visual" rgba="1 0.423529 0.0392157 1" />
                                     <geom type="mesh" contype="0" rgba="1 0.423529 0.0392157 1" mesh="iiwa14_link_6" name="iiwa14_link_6_collision" />
                                     <body name="iiwa14_link_7" pos="0 0.081 0" quat="0.707107 -0.707107 0 0">
+                                        <site    pos="0 0 0.00" name="link7_start" />
                                         <inertial pos="0 0 0.02" quat="0.923068 0 0 0.384636" mass="3.129" diaginertia="0.0152362 0.0140538 0.002872" />
                                         <site     pos="0 0 0.02" quat="0.923068 0 0 0.384636" name="link7_COM" />
                                         <joint name="iiwa14_joint_7" pos="0 0 0" axis="0 0 1" limited="false" range="-3.05433 3.05433" damping="0.0" />
@@ -69,6 +72,7 @@
                                         <body name="iiwa14_right_hand" pos="0 0 0.045" quat="0 0 0 1">
                                             <!-- This camera points out from the eef. -->
                                             <camera mode="fixed" name="iiwa14_eye_in_hand" pos="0.05 0 0" quat="0 0.707108 0.707108 0" fovy="75"/>
+                                            <site pos="0 0 0" name="site_end_effector" />
                                             <!-- To add gripper -->
                                         </body>
                                     </body>
