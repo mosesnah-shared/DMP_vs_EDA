@@ -1,3 +1,23 @@
+# ========================================================================================== #
+#  [Script Name]: EDA.py under example9_pos_and_orient
+#       [Author]: Moses Chong-ook Nah
+#      [Contact]: mosesnah@mit.edu
+# [Date Created]: 2024.03.20
+#  [Description]: Simulation using Elementary Dynamic Actions (EDA)
+#                 Discrete movement in task-space, both position and orientation
+#                 This .py file is for running/generating Figure 13 of the 
+#                 following manuscript from Nah, Lachner and Hogan
+#                 "Robot Control based on Motor Primitives — A Comparison of Two Approaches" 
+#
+#                 The code is exhaustive in details, so that people can really try out the 
+#                 demonstrations by themselves!
+#                 "Code is read more often than it is written" - Guido Van Rossum
+# ========================================================================================== #
+
+# ========================================================================================== #
+# [Section #1] Imports and Enviromental SETUPS
+# ========================================================================================== #
+
 import sys
 import numpy as np
 import mujoco
@@ -21,6 +41,10 @@ from utils.geom_funcs  import rotx, R3_to_SO3, SO3_to_R3
 # Set numpy print options
 np.set_printoptions( precision = 4, threshold = 9, suppress = True )
 
+# ========================================================================================== #
+# [Section #2] Basic MuJoCo Setups
+# ========================================================================================== #
+
 # Basic MuJoCo setups
 dir_name   = ROOT_PATH + '/models/iiwa14/'
 robot_name = 'iiwa14.xml'
@@ -29,33 +53,31 @@ data       = mujoco.MjData( model )
 viewer     = mujoco_viewer.MujocoViewer( model, data, hide_menus = True )
 
 # Parameters for the simulation
-T        = 14.                       # Total Simulation Time
+T        = 14.                      # Total Simulation Time
 dt       = model.opt.timestep       # Time-step for the simulation (set in xml file)
 fps      = 30                       # Frames per second
 save_ps  = 1000                     # Saving point per second
 n_frames = 0                        # The current frame of the simulation
 n_saves  = 0                        # Update for the saving point
 speed    = 1.0                      # The speed of the simulator
-
 t_update = 1./fps     * speed       # Time for update 
 t_save   = 1./save_ps * speed       # Time for saving the data
-
-# The time-step defined in the xml file should be smaller than update
+nq       = model.nq                 # Degrees of freedom of the robot
 assert( dt <= t_update and dt <= t_save )
 
-# The number of degrees of freedom
-nq = model.nq
-
-q_init = np.array( [-0.5000, 0.8236,0,-1.0472,0.8000, 1.5708, 0 ] )
+# The initial position of KUKA iiwa14, which was discovered manually
+q_init = np.array( [-0.5000, 0.8236, 0.0, -1.0472, 0.8000, 1.5708, 0.0 ] )
 data.qpos[ 0:nq ] = q_init
 mujoco.mj_forward( model, data )
 
-# The impedances of the robot 
+# ========================================================================================== #
+# [Section #3] Parameters for Elementary Dynamic Actions and the Main Simulation
+# ========================================================================================== #
+
+# The mechanical impedances of the robot
 Kp = 1600 * np.eye( 3 )
 Bp =  800 * np.eye( 3 )
-
 Bq = 20 * np.eye( model.nq )
-
 kr = 80 
 br =  8
 
@@ -72,12 +94,12 @@ p   = data.site_xpos[ id_EE ]
 Rsb = data.site_xmat[ id_EE ]
 
 # Saving the position and orientation of 7 links
+# This is not required for the control, but for robot visualization at MATLAB
 p_ref = []
 R_ref = [] 
 
 for i in range( 7 ):
     name = "iiwa14_link_" + str( i + 1 ) 
-
 
     p_ref.append( data.body( name ).xpos )
     R_ref.append( data.body( name ).xmat )
@@ -122,27 +144,32 @@ R0_mat = [ ]
 
 while data.time <= T:
 
-    mujoco.mj_step( model, data )
+    # Virtual trajectory for position
     p0, dp0, _ = min_jerk_traj( data.time, t0, t0 + D, pi, pf )
+
+    # Virtual trajectory for orientation
+    tmp, _, _ = min_jerk_traj( data.time, t0, t0 + D, np.zeros( 3 ), wdel )
+    R0 = Rinit @ R3_to_SO3( tmp )
 
     # Torque 1: First-order Joint-space Impedance Controller
     mujoco.mj_jacSite( model, data, Jp, Jr, id_EE )
-
     dp = Jp @ dq
+    
+    # Finding the delta axis
+    Rcurr = np.copy( Rsb ).reshape( 3, -1 )
+    tmp1 = Rotation.from_matrix( Rcurr.T @ R0 )
 
+    # Module 1: Task-space Impedance Controller, for position
     tau_imp1 = Jp.T @ ( Kp @ ( p0 - p ) + Bp @ ( dp0 - dp ) )
 
-    # For orientation
-    Rcurr = np.copy( Rsb ).reshape( 3, -1 )
-
-    # Get the R0 as minimum-jerk trajectory
-    tmp, _, _ = min_jerk_traj( data.time, t0, t0 + D, np.zeros( 3 ), wdel )
-
-    R0 = Rinit @ R3_to_SO3( tmp )
-
-    tmp1 = Rotation.from_matrix( Rcurr.T @ R0 )
+    # Module 2: Task-space Impedance Controller, for orientation
     tau_imp2 = Jr.T @ ( kr * Rcurr @ tmp1.as_rotvec( ) - br * Jr @ dq )
+
+    # Module 3: Joint-space Impedance Controller
     tau_imp3 =  -Bq @ dq
+
+    # Update Simulation
+    mujoco.mj_step( model, data )
 
     # Adding the Torque
     data.ctrl[ : ] = tau_imp1 + tau_imp2 + tau_imp3

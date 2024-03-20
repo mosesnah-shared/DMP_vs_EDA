@@ -1,11 +1,11 @@
 # ========================================================================================== #
-#  [Script Name]: DMP.py under example2_task_discrete
+#  [Script Name]: DMP.py under example8_redundancy
 #       [Author]: Moses Chong-ook Nah
 #      [Contact]: mosesnah@mit.edu
-# [Date Created]: 2024.03.18
+# [Date Created]: 2024.03.20
 #  [Description]: Simulation using Dynamic Movement Primitives (DMP)
-#                 Discrete movement in task-space
-#                 This .py file is for running/generating Figure 5 of the 
+#                 Discrete movement in task-space, while managing kinematic redundancy
+#                 This .py file is for running/generating Figure 13 of the 
 #                 following manuscript from Nah, Lachner and Hogan
 #                 "Robot Control based on Motor Primitives — A Comparison of Two Approaches" 
 #

@@ -1,3 +1,22 @@
+# ========================================================================================== #
+#  [Script Name]: EDA.py under example8_redundancy
+#       [Author]: Moses Chong-ook Nah
+#      [Contact]: mosesnah@mit.edu
+# [Date Created]: 2024.03.20
+#  [Description]: Simulation using Elementary Dynamic Actions (EDA)
+#                 Sequencing discrete movements in task-space, while managing kinematic redundancy
+#                 This .py file is for running/generating Figure 13 of the 
+#                 following manuscript from Nah, Lachner and Hogan
+#                 "Robot Control based on Motor Primitives — A Comparison of Two Approaches" 
+#
+#                 The code is exhaustive in details, so that people can really try out the 
+#                 demonstrations by themselves!
+#                 "Code is read more often than it is written" - Guido Van Rossum
+# ========================================================================================== #
+
+# ========================================================================================== #
+# [Section #1] Imports and Enviromental SETUPS
+# ========================================================================================== #
 import sys
 import numpy as np
 import mujoco
@@ -17,6 +36,10 @@ from utils.trajectory  import min_jerk_traj
 
 # Set numpy print options
 np.set_printoptions( precision = 4, threshold = 9, suppress = True )
+
+# ========================================================================================== #
+# [Section #2] Basic MuJoCo Setups
+# ========================================================================================== #
 
 # Basic MuJoCo setups
 dir_name   = ROOT_PATH + '/models/'
@@ -45,6 +68,10 @@ nq     = model.nq
 q_init = np.ones( nq ) * 0.9
 data.qpos[ 0:nq ] = q_init
 mujoco.mj_forward( model, data )
+
+# ========================================================================================== #
+# [Section #3] Parameters for Elementary Dynamic Actions and the Main Simulation
+# ========================================================================================== #
 
 # The task-space impedances of the 2-DOF robot 
 kp = 300
@@ -94,15 +121,15 @@ is_view = True      # To view the simulation
 # The main simulation loop
 while data.time <= T:
 
-    mujoco.mj_step( model, data )
-
-    p01, dp01, _ = min_jerk_traj( data.time,          t0,          t0 + D1, pi, pf )
+    # The two submovements
+    p01, dp01, _ = min_jerk_traj( data.time,          t0,          t0 + D1,            pi,         pf )
     p02, dp02, _ = min_jerk_traj( data.time, t0 + D1*0.5, t0 + D1*0.5 + D2, np.zeros( 3 ), g_new - pf )
 
     # Getting the Jacobian matrices, translational part
     mujoco.mj_jacSite( model, data, Jp, Jr, id_EE )
     dp = Jp @ dq
 
+    # Superimposing the two submovements
     p0  =  p01 +  p02 
     dp0 = dp01 + dp02
 
@@ -114,6 +141,9 @@ while data.time <= T:
 
     # Adding the Torque as an input
     data.ctrl[ : ] = tau_imp1 + tau_imp2
+
+    # Update Simulation
+    mujoco.mj_step( model, data )
 
     # Update Visualization
     if ( ( n_frames != ( data.time // t_update ) ) and is_view ):
@@ -134,6 +164,9 @@ while data.time <= T:
         dp0_mat.append( np.copy( dp0 ) )    
         Jp_mat.append(  np.copy(  Jp ) )
 
+# ========================================================================================== #
+# [Section #4] Save and Close
+# ========================================================================================== #
 # Save Data as mat file for MATLAB visualization
 if is_save:
     data_dic = { "t_arr": t_mat, "q_arr": q_mat, "p_arr": p_mat, "dp_arr": dp_mat,
