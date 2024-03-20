@@ -25,6 +25,8 @@ import mujoco_viewer
 from scipy.io import savemat
 from pathlib  import Path
 
+import matplotlib.pyplot as plt
+
 # Add and save the ROOT_PATH to run this code, which is three levels above.
 ROOT_PATH = str( Path( __file__ ).parent.parent.parent )
 sys.path.append( ROOT_PATH )
@@ -164,6 +166,8 @@ for i in range( 2 ): # For XY coordinates
         # Element-wise multiplication and summation
         W_LWR[ i, j ] = np.sum( a_arr * b_arr * phi_arr ) / np.sum( a_arr * a_arr * phi_arr )
 
+W_LWR = np.nan_to_num( W_LWR )
+
 # -------------------------------------------- #
 # Method2: Linear Least-square Regression (LLS)
 #          Compared to Method 1, the accuracy is better, especially for learning on SO(3)  
@@ -180,9 +184,16 @@ for i, t in enumerate( td ):
 # Weight with Linear Least-square Multiplication
 W_LLS = B_mat @ A_mat.T @ np.linalg.inv( A_mat @ A_mat.T )
 
+# Scaling down 
+for i in range( 2 ):
+    if ( gd[ i ] - y0d[ i ] ) != 0:
+        W_LLS[ i, : ] = 1./( ( gd[ i ] - y0d[ i ] ) ) * W_LLS[ i, : ]
+
 # Rollout of the trajectory
 # One can choose either the weights learned by LWR or LLS
 weight = W_LLS  # W_LWR
+
+
 
 # Rolling out the trajectory, to get the position, velocity and acceleration array
 # The whole time array for the roll out
@@ -194,7 +205,7 @@ t_arr = np.append( t_arr, T )   # Technical detail: Append the final to include 
 #                   For the trajectory rollout. 
 #                   This shows the benefit of DMP, which is the spatial/temporal invariance property>
 
-z0 = np.zeros( nq )
+z0 = np.zeros( 2 )
 y0 = y0d            # Setting the same initial position  with the demonstrated trajectory.
 g  = pf             # Setting the same    goal position  with the demonstrated trajectory. [TRYOUT] g  = 2. * pf
 sd.tau = tau        # Setting the same movement duration with the demonstrated trajectory. [TRYOUT] sd.tau = 2*tau
@@ -207,6 +218,18 @@ p_arr, _, dp_arr, dz_arr = trans_sys.rollout( y0, z0, g, input_arr_discrete, t0,
 
 # dz_arr can be used to derive the acceleration
 ddp_arr = dz_arr/sd.tau
+
+
+# Plotting
+plt.figure()
+plt.plot(t_arr, p_arr[ 0, : ], linewidth=3)  # Transpose y_arr to match dimensions
+plt.plot(t_arr, p_arr[ 1, : ], linewidth=3)  # Transpose y_arr to match dimensions
+plt.xlabel('Time')
+plt.ylabel('Output')
+plt.title('Rollout with Weight Array')
+plt.legend(['y_arr', 'dy_arr'])
+plt.show()
+exit( )
 
 # ========================================================================================== #
 # [Section #4] Main Simulation

@@ -134,7 +134,7 @@ for i, t in enumerate( td ):
     ddpd[ :, i ] = ddq_tmp
 
 # Method1: Locally Weighted Regression (LWR)
-W_LWR = np.zeros( ( nq, N ) )
+W_LWR = np.zeros( ( 2, N ) )
 
 # Iterating for each weight
 for i in range( 2 ): # For XY coordinates

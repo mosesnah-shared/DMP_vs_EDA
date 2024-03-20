@@ -25,6 +25,7 @@ import mujoco
 import mujoco_viewer
 from scipy.io import savemat
 from pathlib  import Path
+import matplotlib.pyplot as plt 
 
 # Add and save the ROOT_PATH to run this code, which is three levels above.
 ROOT_PATH = str( Path( __file__ ).parent.parent.parent )
@@ -140,7 +141,7 @@ for i, t in enumerate( td ):
 # Method1: Locally Weighted Regression (LWR)
 #          Discussed in the original paper of Ijspeert et al. 2013
 # -------------------------------------------- #    
-W_LWR = np.zeros( ( nq, N ) )
+W_LWR = np.zeros( ( 2, N ) )
 
 # Iterating for each weight
 for i in range( 2 ): # For XY coordinates
@@ -169,7 +170,7 @@ W_LLS = B_mat @ A_mat.T @ np.linalg.inv( A_mat @ A_mat.T )
 
 # Rollout of the trajectory
 # One can choose either the weights learned by LWR or LLS
-weight = W_LLS  # W_LWR
+weight = W_LWR  # W_LWR
 
 # The actual time array for the rollout
 t_arr = np.arange( 0, T, dt )
@@ -184,6 +185,7 @@ p_arr, _, dp_arr, dz_arr = trans_sys.rollout( y0, z0, g, input_arr_discrete, t0,
 
 # dz_arr for the acceleration
 ddp_arr = dz_arr/sd.tau
+
 
 # ========================================================================================== #
 # [Section #4] Main Simulation
