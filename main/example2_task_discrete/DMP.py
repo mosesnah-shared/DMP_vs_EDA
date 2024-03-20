@@ -136,16 +136,16 @@ trans_sys = TransformationSystem( az, bz, sd )
 # of the demonstrated trajectory
 # Suffix "d" is added for demonstration
 td   = np.linspace( 0, D, num = P )  # Time 
-qd   = np.zeros( ( 2, P ) )         # Demonstrated position
-dqd  = np.zeros( ( 2, P ) )         # Demonstrated velocity
-ddqd = np.zeros( ( 2, P ) )         # Demonstrated acceleration
+pd   = np.zeros( ( 2, P ) )         # Demonstrated position
+dpd  = np.zeros( ( 2, P ) )         # Demonstrated velocity
+ddpd = np.zeros( ( 2, P ) )         # Demonstrated acceleration
 
 for i, t in enumerate( td ):
     q_tmp, dq_tmp, ddq_tmp = min_jerk_traj( t, 0, D, pi, pf )
 
-    qd[   :, i ] =   q_tmp
-    dqd[  :, i ] =  dq_tmp
-    ddqd[ :, i ] = ddq_tmp
+    pd[   :, i ] =   q_tmp
+    dpd[  :, i ] =  dq_tmp
+    ddpd[ :, i ] = ddq_tmp
 
 # There are two ways to learn the weights, and we present both methods
 # -------------------------------------------- #    
@@ -158,7 +158,7 @@ W_LWR = np.zeros( ( nq, N ) )
 for i in range( 2 ): # For XY coordinates
     for j in range( N ):
         a_arr = sd.calc( td ) * ( gd[ i ] - y0d[ i ] )
-        b_arr = trans_sys.get_desired( qd[ i, : ], dqd[ i, : ], ddqd[ i, : ], gd[ i ] )
+        b_arr = trans_sys.get_desired( pd[ i, : ], dpd[ i, : ], ddpd[ i, : ], gd[ i ] )
         phi_arr = fd.calc_ith( td, j ) 
         
         # Element-wise multiplication and summation
@@ -171,7 +171,7 @@ for i in range( 2 ): # For XY coordinates
 # -------------------------------------------- #       
           
 A_mat = np.zeros( ( N, P ) )
-B_mat = trans_sys.get_desired( qd, dqd, ddqd, gd )
+B_mat = trans_sys.get_desired( pd, dpd, ddpd, gd )
 
 # Interating along the time sample points
 for i, t in enumerate( td ):

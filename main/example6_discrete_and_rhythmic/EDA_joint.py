@@ -1,3 +1,26 @@
+# ========================================================================================== #
+#  [Script Name]: EDA_joint.py under example6_discrete_and_rhythmic
+#       [Author]: Moses Chong-ook Nah
+#      [Contact]: mosesnah@mit.edu
+# [Date Created]: 2024.03.18
+#  [Description]: Simulation using Elementary Dynamic Actions (EDA)
+#                 Combination of discrete and rhythmic movements in joint-space
+#   
+#                 This .py file is for running/generating Figure 11 of the 
+#                 following manuscript from Nah, Lachner and Hogan
+#                 "Robot Control based on Motor Primitives — A Comparison of Two Approaches" 
+#
+#                 The code is detailed with comments, but not at the level of examples 1, 2, 3 
+#                 since after example 4 will be "advanced" application of EDA.
+#                 Meaning, we now often skip the details for explanation and assume 
+#                 the knowledge presented at example 1, 2, 3. 
+#                 "Code is read more often than it is written" - Guido Van Rossum
+# ========================================================================================== #
+
+# ========================================================================================== #
+# [Section #1] Imports and Enviromental SETUPS
+# ========================================================================================== #
+
 import sys
 import numpy as np
 import mujoco
@@ -17,6 +40,10 @@ from utils.trajectory  import min_jerk_traj
 
 # Set numpy print options
 np.set_printoptions( precision = 4, threshold = 9, suppress = True )
+
+# ========================================================================================== #
+# [Section #2] Basic MuJoCo Setups
+# ========================================================================================== #
 
 # Basic MuJoCo setups
 dir_name   = ROOT_PATH + '/models/'
@@ -55,6 +82,10 @@ data.qvel[ 0:nq ] = dq_init
 
 mujoco.mj_forward( model, data )
 
+# ========================================================================================== #
+# [Section #3] Parameters for Elementary Dynamic Actions and the Main Simulation
+# ========================================================================================== #
+
 # The joint-impedances of the 2-DOF robot 
 # Can try any values that you want.
 kq = 150
@@ -80,18 +111,17 @@ is_view = True      # To view the simulation
 # The main simulation loop
 while data.time <= T:
 
-    mujoco.mj_step( model, data )
-
-    # Get the virtual joint trajectory's position and velocity. 
-    q0_sub1, dq0_sub1, _ = min_jerk_traj( data.time, 3.5, 3.5 + D, qi, qf )
+    # The superposition of four submovements
+    q0_sub1, dq0_sub1, _ = min_jerk_traj( data.time, 3.5       , 3.5        + D,             qi,      qf )
     q0_sub2, dq0_sub2, _ = min_jerk_traj( data.time, 3.5 +  5.0, 3.5 +  5.0 + D, np.zeros( nq ), qi - qf )
     q0_sub3, dq0_sub3, _ = min_jerk_traj( data.time, 3.5 + 10.0, 3.5 + 10.0 + D, np.zeros( nq ), qf - qi )
     q0_sub4, dq0_sub4, _ = min_jerk_traj( data.time, 3.5 + 15.0, 3.5 + 15.0 + D, np.zeros( nq ), qf - qi )
 
+    # Oscillation
+    q0_osc  =      qA * np.sin( w0 * data.time )
+    dq0_osc = w0 * qA * np.cos( w0 * data.time )
 
-    q0_osc  = qA * np.sin( w0 * data.time )
-    dq0_osc = qA * w0 * np.cos( w0 * data.time )
-
+    # Direct Summation of virtual trajectories
     q0  =  q0_sub1 +  q0_sub2 +  q0_sub3 +  q0_osc
     dq0 = dq0_sub1 + dq0_sub2 + dq0_sub3 + dq0_osc
 
@@ -100,6 +130,9 @@ while data.time <= T:
 
     # Adding the Torque as an input
     data.ctrl[ : ] = tau_imp
+
+    # Update simulation
+    mujoco.mj_step( model, data )
 
     # Update Visualization
     if ( ( n_frames != ( data.time // t_update ) ) and is_view ):
@@ -117,10 +150,15 @@ while data.time <= T:
         dq_mat.append(  np.copy( dq  ) )
         dq0_mat.append( np.copy( dq0 ) )
 
+
+# ========================================================================================== #
+# [Section #4] Save and close simulation
+# ========================================================================================== #
+
 # Save Data as mat file for MATLAB visualization
 if is_save:
     data_dic = { "t_arr": t_mat, "q_arr": q_mat, "q0_arr": q0_mat, "dq_arr": dq_mat, "dq0_arr": dq0_mat, "Kq": Kq, "Bq": Bq }
-    savemat( CURRENT_PATH + "/data/EDA_joint_rhythmic.mat", data_dic )
+    savemat( CURRENT_PATH + "/data/EDA_joint.mat", data_dic )
     # Substitute . in float as p for readability.
 
 if is_view:            

@@ -1,3 +1,26 @@
+# ========================================================================================== #
+#  [Script Name]: EDA_task.py under example6_discrete_and_rhythmic
+#       [Author]: Moses Chong-ook Nah
+#      [Contact]: mosesnah@mit.edu
+# [Date Created]: 2024.03.18
+#  [Description]: Simulation using Elementary Dynamic Actions (EDA)
+#                 Combination of discrete and rhythmic movements in task-space
+#   
+#                 This .py file is for running/generating Figure 11 of the 
+#                 following manuscript from Nah, Lachner and Hogan
+#                 "Robot Control based on Motor Primitives — A Comparison of Two Approaches" 
+#
+#                 The code is detailed with comments, but not at the level of examples 1, 2, 3 
+#                 since after example 4 will be "advanced" application of EDA.
+#                 Meaning, we now often skip the details for explanation and assume 
+#                 the knowledge presented at example 1, 2, 3. 
+#                 "Code is read more often than it is written" - Guido Van Rossum
+# ========================================================================================== #
+
+# ========================================================================================== #
+# [Section #1] Imports and Enviromental SETUPS
+# ========================================================================================== #
+
 import sys
 import numpy as np
 import mujoco
@@ -17,6 +40,10 @@ from utils.trajectory  import min_jerk_traj
 
 # Set numpy print options
 np.set_printoptions( precision = 4, threshold = 9, suppress = True )
+
+# ========================================================================================== #
+# [Section #2] Basic MuJoCo Setups
+# ========================================================================================== #
 
 # Basic MuJoCo setups
 dir_name   = ROOT_PATH + '/models/'
@@ -46,6 +73,10 @@ q1     = np.pi * 1/12
 q_init = np.array( [ q1, np.pi-2*q1 ] )
 data.qpos[ 0:nq ] = q_init
 mujoco.mj_forward( model, data )
+
+# ========================================================================================== #
+# [Section #3] Parameters for Elementary Dynamic Actions and the Main Simulation
+# ========================================================================================== #
 
 # The task-space impedances of the 2-DOF robot 
 kp = 60
@@ -91,16 +122,17 @@ is_view = True      # To view the simulation
 # The main simulation loop
 while data.time <= T:
 
-    mujoco.mj_step( model, data )
-
-    p0_osc  =       r0 * np.array( [  np.cos( w0*data.time ), np.sin( w0*data.time ), 0 ] )
-    dp0_osc = w0 *  r0 * np.array( [ -np.sin( w0*data.time ), np.cos( w0*data.time ), 0 ] )
-
-    p01, dp01, _ = min_jerk_traj( data.time, 3.5       , 3.5       + D, p1, p2 )
+    # The four submovements that are superimposed
+    p01, dp01, _ = min_jerk_traj( data.time, 3.5       , 3.5        + D,            p1, p2      )
     p02, dp02, _ = min_jerk_traj( data.time, 3.5 +  5.0, 3.5 +  5.0 + D, np.zeros( 3 ), p1 - p2 )
     p03, dp03, _ = min_jerk_traj( data.time, 3.5 + 10.0, 3.5 + 10.0 + D, np.zeros( 3 ), p2 - p1 )
     p04, dp04, _ = min_jerk_traj( data.time, 3.5 + 15.0, 3.5 + 15.0 + D, np.zeros( 3 ), p1 - p2 )
 
+    # Oscillation 
+    p0_osc  =       r0 * np.array( [  np.cos( w0*data.time ), np.sin( w0*data.time ), 0 ] )
+    dp0_osc = w0 * r0 * np.array( [ -np.sin( w0*data.time ), np.cos( w0*data.time ), 0 ] )
+
+    # Superposition of submovements and oscillations
     p0  =  p0_osc +  p01 +  p02 +  p03 +  p04
     dp0 = dp0_osc + dp01 + dp02 + dp03 + dp04
 
@@ -113,6 +145,9 @@ while data.time <= T:
 
     # Adding the Torque as an input
     data.ctrl[ : ] = tau_imp
+
+    # Update Simulation
+    mujoco.mj_step( model, data )
 
     # Update Visualization
     if ( ( n_frames != ( data.time // t_update ) ) and is_view ):
@@ -133,6 +168,9 @@ while data.time <= T:
         dp0_mat.append( np.copy( dp0 ) )    
         Jp_mat.append(  np.copy(  Jp ) )
 
+# ========================================================================================== #
+# [Section #4] Save data and close simulation
+# ========================================================================================== #
 # Save Data as mat file for MATLAB visualization
 if is_save:
     data_dic = { "t_arr": t_mat, "q_arr": q_mat, "p_arr": p_mat, "dp_arr": dp_mat,
