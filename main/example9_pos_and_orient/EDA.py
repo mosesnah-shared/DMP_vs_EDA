@@ -5,7 +5,7 @@
 # [Date Created]: 2024.03.20
 #  [Description]: Simulation using Elementary Dynamic Actions (EDA)
 #                 Discrete movement in task-space, both position and orientation
-#                 This .py file is for running/generating Figure 13 of the 
+#                 This .py file is for running/generating Figure 14 of the 
 #                 following manuscript from Nah, Lachner and Hogan
 #                 "Robot Control based on Motor Primitives — A Comparison of Two Approaches" 
 #
