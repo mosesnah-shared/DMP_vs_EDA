@@ -1,11 +1,11 @@
 # ========================================================================================== #
-#  [Script Name]: DMP.py under example2_task_discrete
+#  [Script Name]: DMP.py under example7_sequencing
 #       [Author]: Moses Chong-ook Nah
 #      [Contact]: mosesnah@mit.edu
 # [Date Created]: 2024.03.18
 #  [Description]: Simulation using Dynamic Movement Primitives (DMP)
-#                 Discrete movement in task-space
-#                 This .py file is for running/generating Figure 5 of the 
+#                 Sequencing discrete movement in task-space
+#                 This .py file is for running/generating Figure 12 of the 
 #                 following manuscript from Nah, Lachner and Hogan
 #                 "Robot Control based on Motor Primitives — A Comparison of Two Approaches" 
 #
@@ -156,6 +156,15 @@ for i, t in enumerate( td ):
 
 # Weight with Linear Least-square Multiplication
 W_LLS = B_mat @ A_mat.T @ np.linalg.inv( A_mat @ A_mat.T )
+
+# Scaling down is required
+for i in range( 2 ):
+
+    # If the displacement is zero, skip the weight matrix calculation.
+    if ( gd[ i ] - y0d[ i ] ) != 0:
+        W_LLS[ i, : ] = 1./( ( gd[ i ] - y0d[ i ] ) ) * W_LLS[ i, : ]
+    else:
+        W_LLS[ i, : ]= 0
 
 # Rollout of the trajectory
 # One can choose either the weights learned by LWR or LLS

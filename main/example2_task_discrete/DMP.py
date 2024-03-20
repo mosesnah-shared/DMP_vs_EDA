@@ -25,8 +25,6 @@ import mujoco_viewer
 from scipy.io import savemat
 from pathlib  import Path
 
-import matplotlib.pyplot as plt
-
 # Add and save the ROOT_PATH to run this code, which is three levels above.
 ROOT_PATH = str( Path( __file__ ).parent.parent.parent )
 sys.path.append( ROOT_PATH )
@@ -143,11 +141,11 @@ dpd  = np.zeros( ( 2, P ) )         # Demonstrated velocity
 ddpd = np.zeros( ( 2, P ) )         # Demonstrated acceleration
 
 for i, t in enumerate( td ):
-    q_tmp, dq_tmp, ddq_tmp = min_jerk_traj( t, 0, D, pi, pf )
+    p_tmp, dp_tmp, ddp_tmp = min_jerk_traj( t, 0, D, pi, pf )
 
-    pd[   :, i ] =   q_tmp
-    dpd[  :, i ] =  dq_tmp
-    ddpd[ :, i ] = ddq_tmp
+    pd[   :, i ] =   p_tmp
+    dpd[  :, i ] =  dp_tmp
+    ddpd[ :, i ] = ddp_tmp
 
 # There are two ways to learn the weights, and we present both methods
 # -------------------------------------------- #    
@@ -184,16 +182,18 @@ for i, t in enumerate( td ):
 # Weight with Linear Least-square Multiplication
 W_LLS = B_mat @ A_mat.T @ np.linalg.inv( A_mat @ A_mat.T )
 
-# Scaling down 
+# Scaling down is required
 for i in range( 2 ):
+
+    # If the displacement is zero, skip the weight matrix calculation.
     if ( gd[ i ] - y0d[ i ] ) != 0:
         W_LLS[ i, : ] = 1./( ( gd[ i ] - y0d[ i ] ) ) * W_LLS[ i, : ]
+    else:
+        W_LLS[ i, : ]= 0
 
 # Rollout of the trajectory
 # One can choose either the weights learned by LWR or LLS
 weight = W_LLS  # W_LWR
-
-
 
 # Rolling out the trajectory, to get the position, velocity and acceleration array
 # The whole time array for the roll out
@@ -219,17 +219,6 @@ p_arr, _, dp_arr, dz_arr = trans_sys.rollout( y0, z0, g, input_arr_discrete, t0,
 # dz_arr can be used to derive the acceleration
 ddp_arr = dz_arr/sd.tau
 
-
-# Plotting
-plt.figure()
-plt.plot(t_arr, p_arr[ 0, : ], linewidth=3)  # Transpose y_arr to match dimensions
-plt.plot(t_arr, p_arr[ 1, : ], linewidth=3)  # Transpose y_arr to match dimensions
-plt.xlabel('Time')
-plt.ylabel('Output')
-plt.title('Rollout with Weight Array')
-plt.legend(['y_arr', 'dy_arr'])
-plt.show()
-exit( )
 
 # ========================================================================================== #
 # [Section #4] Main Simulation

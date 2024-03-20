@@ -1,3 +1,23 @@
+# ========================================================================================== #
+#  [Script Name]: EDA.py  under example7_sequencing
+#       [Author]: Moses Chong-ook Nah
+#      [Contact]: mosesnah@mit.edu
+# [Date Created]: 2024.03.18
+#  [Description]: Simulation using Dynamic Movement Primitives (DMP)
+#                 Sequencing discrete movement in task-space
+#                 This .py file is for running/generating Figure 12 of the 
+#                 following manuscript from Nah, Lachner and Hogan
+#                 "Robot Control based on Motor Primitives — A Comparison of Two Approaches" 
+#
+#                 The code is exhaustive in details, so that people can really try out the 
+#                 demonstrations by themselves!
+#                 "Code is read more often than it is written" - Guido Van Rossum
+# ========================================================================================== #
+
+# ========================================================================================== #
+# [Section #1] Imports and Enviromental SETUPS
+# ========================================================================================== #
+
 import sys
 import numpy as np
 import mujoco
@@ -18,6 +38,10 @@ from utils.trajectory  import min_jerk_traj
 # Set numpy print options
 np.set_printoptions( precision = 4, threshold = 9, suppress = True )
 
+# ========================================================================================== #
+# [Section #2] Basic MuJoCo Setups
+# ========================================================================================== #
+
 # Basic MuJoCo setups
 dir_name   = ROOT_PATH + '/models/'
 robot_name = '2DOF_planar_torque.xml'
@@ -33,7 +57,6 @@ save_ps  = 1000                     # Hz for saving the data
 n_frames = 0                        # The number of current frame of the simulation
 n_saves  = 0                        # Update for the saving point
 speed    = 1.0                      # The speed of the simulator
-
 t_update = 1./fps     * speed       # Time for update 
 t_save   = 1./save_ps * speed       # Time for saving the data
 
@@ -47,6 +70,10 @@ q_init = np.array( [ q1, np.pi-2*q1 ] )
 data.qpos[ 0:nq ] = q_init
 mujoco.mj_forward( model, data )
 
+# ========================================================================================== #
+# [Section #3] Parameters for Elementary Dynamic Actions and the Main Simulation
+# ========================================================================================== #
+
 # The task-space impedances of the 2-DOF robot 
 kp = 90
 bp = 60
@@ -56,7 +83,6 @@ Bp = bp * np.eye( 3 )
 # Save the references for the q and dq 
 q  = data.qpos[ 0:nq ]
 dq = data.qvel[ 0:nq ]
-
 
 # Get the end-effector's ID and its position, translational and rotational Jacobian matrices
 EE_site = "site_end_effector"
@@ -77,7 +103,6 @@ pi    = np.copy(  p )
 pf    = pi + np.array( [ -0.7, 0.7, 0. ] )
 g_new = pf + np.array( [  1.5, 0.5, 0. ] )
 
-
 # The data for mat save
 t_mat   = [ ]
 q_mat   = [ ] 
@@ -95,10 +120,9 @@ is_view = True      # To view the simulation
 # The main simulation loop
 while data.time <= T:
 
-    mujoco.mj_step( model, data )
-
-    p01, dp01, _ = min_jerk_traj( data.time,        t0,        t0 + D1, pi, pf )
-    p02, dp02, _ = min_jerk_traj( data.time, t0+D1*0.5, t0+D1*0.5 + D2, np.zeros( 3 ), g_new - pf )
+    # The virtual trajectories
+    p01, dp01, _ = min_jerk_traj( data.time,        t0,        t0 + D1,            pi,         pf )         # Submovement 1
+    p02, dp02, _ = min_jerk_traj( data.time, t0+D1*0.5, t0+D1*0.5 + D2, np.zeros( 3 ), g_new - pf )         # Submovement 2
 
     p0  =  p01 +  p02
     dp0 = dp01 + dp02
@@ -112,6 +136,9 @@ while data.time <= T:
 
     # Adding the Torque as an input
     data.ctrl[ : ] = tau_imp
+
+    # Update Simulation
+    mujoco.mj_step( model, data )
 
     # Update Visualization
     if ( ( n_frames != ( data.time // t_update ) ) and is_view ):
@@ -132,7 +159,11 @@ while data.time <= T:
         dp0_mat.append( np.copy( dp0 ) )    
         Jp_mat.append(  np.copy(  Jp ) )
 
-# Save Data as mat file for MATLAB visualization
+# ========================================================================================== #
+# [Section #3] Save and Close
+# ========================================================================================== #
+# Save data as mat file for MATLAB visualization
+# Saved under ./data directory
 if is_save:
     data_dic = { "t_arr": t_mat, "q_arr": q_mat, "p_arr": p_mat, "dp_arr": dp_mat,
                  "p0_arr": p0_mat, "dq_arr": dq_mat, "dp0_arr": dp0_mat, "Kp": Kp, "Bq": Bp, "Jp_arr": Jp_mat }

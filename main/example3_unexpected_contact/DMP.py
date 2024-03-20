@@ -125,16 +125,16 @@ trans_sys = TransformationSystem( az, bz, sd )
 # of the demonstrated trajectory
 # Suffix "d" is added for demonstration
 td   = np.linspace( 0, D, num = P )  # Time 
-qd   = np.zeros( ( 2, P ) )         # Demonstrated position
-dqd  = np.zeros( ( 2, P ) )         # Demonstrated velocity
-ddqd = np.zeros( ( 2, P ) )         # Demonstrated acceleration
+pd   = np.zeros( ( 2, P ) )         # Demonstrated position
+dpd  = np.zeros( ( 2, P ) )         # Demonstrated velocity
+ddpd = np.zeros( ( 2, P ) )         # Demonstrated acceleration
 
 for i, t in enumerate( td ):
-    q_tmp, dq_tmp, ddq_tmp = min_jerk_traj( t, 0, D, pi, pf )
+    p_tmp, dp_tmp, ddp_tmp = min_jerk_traj( t, 0, D, pi, pf )
 
-    qd[   :, i ] =   q_tmp
-    dqd[  :, i ] =  dq_tmp
-    ddqd[ :, i ] = ddq_tmp
+    pd[   :, i ] =   p_tmp
+    dpd[  :, i ] =  dp_tmp
+    ddpd[ :, i ] = ddp_tmp
 
 # There are two ways to learn the weights, and we present both methods
 # -------------------------------------------- #    
@@ -147,11 +147,13 @@ W_LWR = np.zeros( ( 2, N ) )
 for i in range( 2 ): # For XY coordinates
     for j in range( N ):
         a_arr = sd.calc( td ) * ( gd[ i ] - y0d[ i ] )
-        b_arr = trans_sys.get_desired( qd[ i, : ], dqd[ i, : ], ddqd[ i, : ], gd[ i ] )
+        b_arr = trans_sys.get_desired( pd[ i, : ], dpd[ i, : ], ddpd[ i, : ], gd[ i ] )
         phi_arr = fd.calc_ith( td, j ) 
         
         # Element-wise multiplication and summation
         W_LWR[ i, j ] = np.sum( a_arr * b_arr * phi_arr ) / np.sum( a_arr * a_arr * phi_arr )
+
+W_LWR = np.nan_to_num( W_LWR )
 
 # -------------------------------------------- #
 # Method2: Linear Least-square Regression (LLS)
@@ -159,7 +161,7 @@ for i in range( 2 ): # For XY coordinates
 #          More details on example9_pos_and_orient
 # -------------------------------------------- #         
 A_mat = np.zeros( ( N, P ) )
-B_mat = trans_sys.get_desired( qd, dqd, ddqd, gd )
+B_mat = trans_sys.get_desired( pd, dpd, ddpd, gd )
 
 # Interating along the time sample points
 for i, t in enumerate( td ):
@@ -167,6 +169,16 @@ for i, t in enumerate( td ):
 
 # Weight with Linear Least-square Multiplication
 W_LLS = B_mat @ A_mat.T @ np.linalg.inv( A_mat @ A_mat.T )
+
+# Scaling down is required
+for i in range( 2 ):
+
+    # If the displacement is zero, skip the weight matrix calculation.
+    if ( gd[ i ] - y0d[ i ] ) != 0:
+        W_LLS[ i, : ] = 1./( ( gd[ i ] - y0d[ i ] ) ) * W_LLS[ i, : ]
+    else:
+        W_LLS[ i, : ]= 0
+
 
 # Rollout of the trajectory
 # One can choose either the weights learned by LWR or LLS
@@ -205,7 +217,7 @@ dq0_mat = [ ]
 # Other Flags
 is_save = True     # To save the data
 is_view = True     # To view the simulation
-is_PD   = True     # With joint-space PD Stabilization
+is_PD   = False    # With joint-space PD Stabilization
 
 # Step for the simulation
 n_sim = 0

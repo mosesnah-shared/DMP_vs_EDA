@@ -94,9 +94,9 @@ trans_sys = TransformationSystem( az, bz, sr )
 # Imitation Learning, getting the P sample points of position, velocity and acceleration
 # Suffix "d" is added for demonstration
 td   = np.linspace( 0, Tp, num = P )  # Time 
-pd   = np.zeros( ( 2, P ) )         # Demonstrated position
-dpd  = np.zeros( ( 2, P ) )         # Demonstrated velocity
-ddpd = np.zeros( ( 2, P ) )         # Demonstrated acceleration
+pd   = np.zeros( ( 2, P ) )           # Demonstrated position
+dpd  = np.zeros( ( 2, P ) )           # Demonstrated velocity
+ddpd = np.zeros( ( 2, P ) )           # Demonstrated acceleration
 
 # Radius, angular velocity and center location
 r  = 0.5
@@ -121,6 +121,8 @@ for i in range( 2 ):
         
         # Element-wise multiplication and summation
         W_LWR[ i, j ] = np.sum( a_arr * b_arr * phi_arr ) / np.sum( a_arr * a_arr * phi_arr )
+
+W_LWR = np.nan_to_num( W_LWR )
 
 # Method2: Linear Least-square Regressions
 A_mat = np.zeros( ( N, P ) )

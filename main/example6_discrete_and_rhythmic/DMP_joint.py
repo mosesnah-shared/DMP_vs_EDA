@@ -1,12 +1,12 @@
 # ========================================================================================== #
-#  [Script Name]: DMP_joint.py under example5_rhythmic
+#  [Script Name]: DMP_joint.py under example6_discrete_and_rhythmic
 #       [Author]: Moses Chong-ook Nah
 #      [Contact]: mosesnah@mit.edu
-# [Date Created]: 2024.03.18
+# [Date Created]: 2024.03.20
 #  [Description]: Simulation using Dynamic Movement Primitives (DMP)
-#                 Rhythmic movement in joint-space
+#                 Combination of Discrete and Rhythmic movement in joint-space
 #   
-#                 This .py file is for running/generating Figure 10 of the 
+#                 This .py file is for running/generating Figure 11 of the 
 #                 following manuscript from Nah, Lachner and Hogan
 #                 "Robot Control based on Motor Primitives — A Comparison of Two Approaches" 
 #
@@ -127,6 +127,8 @@ for i in range( nq ):
         # Element-wise multiplication and summation
         W_LWR[ i, j ] = np.sum( a_arr * b_arr * phi_arr ) / np.sum( a_arr * a_arr * phi_arr )
 
+W_LWR = np.nan_to_num( W_LWR )
+
 # Method2: Linear Least-square Regressions
 A_mat = np.zeros( ( N, P ) )
 B_mat = trans_sys.get_desired( qd, dqd, ddqd, q_init )
@@ -171,7 +173,7 @@ is_save = True      # To save the data
 is_view = True      # To view the simulation
 
 # Updating the Simulation
-data.qpos[ 0:nq ] = q_init
+data.qpos[ 0:nq ] =  q_init
 data.qvel[ 0:nq ] = dq_init
 mujoco.mj_forward( model, data )
 
@@ -209,7 +211,7 @@ while data.time <= T:
 
     # Updating the DMP trajectories in the main loop.
     if n_sim == 0:
-        y_new, z_new, dy, dz = trans_sys.step( y_old, z_old, g_new, np.zeros( 2 ), dt )
+        y_new, z_new, dy, dz = trans_sys.step( y_old, z_old, g_new,           np.zeros( 2 ), dt )
     else:
         y_new, z_new, dy, dz = trans_sys.step( y_old, z_old, g_new, input_arr[ :, n_sim-1 ], dt )
 

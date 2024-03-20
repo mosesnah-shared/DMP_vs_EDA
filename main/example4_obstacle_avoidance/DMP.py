@@ -97,7 +97,7 @@ Jr = np.zeros( ( 3, nq ) )
 # ========================================================================================== #
 
 # The parameters of the minimum-jerk trajectory.
-t0   = 0.    
+t0   = 0.0   
 pdel = np.array( [ 0.0, 1.2, 0.0 ] )
 pi   = np.copy( p )
 pf   = pi + pdel
@@ -149,6 +149,7 @@ for i in range( 2 ): # For XY coordinates
         # Element-wise multiplication and summation
         W_LWR[ i, j ] = np.sum( a_arr * b_arr * phi_arr ) / np.sum( a_arr * a_arr * phi_arr )
 
+W_LWR = np.nan_to_num( W_LWR )
 
 # Method2: Linear Least-square Regressions
 A_mat = np.zeros( ( N, P ) )
@@ -160,6 +161,15 @@ for i, t in enumerate( td ):
 
 # Weight with Linear Least-square Multiplication
 W_LLS = B_mat @ A_mat.T @ np.linalg.inv( A_mat @ A_mat.T )
+
+# Scaling down is required
+for i in range( 2 ):
+
+    # If the displacement is zero, skip the weight matrix calculation.
+    if ( gd[ i ] - y0d[ i ] ) != 0:
+        W_LLS[ i, : ] = 1./( ( gd[ i ] - y0d[ i ] ) ) * W_LLS[ i, : ]
+    else:
+        W_LLS[ i, : ]= 0
 
 # Choosing the weight array that we use for the main simulation
 weight = W_LLS  # W_LWR
@@ -222,8 +232,9 @@ while data.time <= T:
     Cp = 300 * R @ dp * np.exp( -3 * theta ) if np.sum( dp ) != 0 else np.zeros( 3 )
 
     # If it is the first step for simulation, just use the coupling term
-    if n_sim == 0:
-        y_new, z_new, dy, dz = trans_sys.step( y_old, z_old, g, Cp[ :2 ], dt )
+    if data.time <= t0:
+        y_new, z_new = y_old, z_old
+        dy   , dz    = np.zeros( 2 ), np.zeros( 2 )
     else:
         y_new, z_new, dy, dz = trans_sys.step( y_old, z_old, g, input_arr_discrete[ :, n_sim-1] + Cp[ :2 ], dt )
 

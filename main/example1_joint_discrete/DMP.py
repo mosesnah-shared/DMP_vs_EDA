@@ -134,6 +134,10 @@ for i in range( nq ):
         # Element-wise multiplication and summation
         W_LWR[ i, j ] = np.sum( a_arr * b_arr * phi_arr ) / np.sum( a_arr * a_arr * phi_arr )
 
+# Substitute nan to 0 
+W_LWR = np.nan_to_num( W_LWR )
+
+
 # -------------------------------------------- #
 # Method2: Linear Least-square Regression (LLS)
 #          Compared to Method 1, the accuracy is better, especially for learning on SO(3)  
@@ -149,6 +153,19 @@ for i, t in enumerate( td ):
 
 # Weight with Linear Least-square Multiplication
 W_LLS = B_mat @ A_mat.T @ np.linalg.inv( A_mat @ A_mat.T )
+
+# Scaling down is required
+# This already shows one of the limitations of this choice of DMP.
+# If one of the coordinates end up with zero, despite a non-zero displacement
+# The weight matrix of that coordinate is not defined.
+# Hence, one can either use the alternative DMPs:
+# [1] Pastor, Peter, et al. "Learning and generalization of motor skills by learning from demonstration." ICRA (2009)
+# [2] Koutras, Leonidas, and Zoe Doulgeri. "A novel dmp formulation for global and frame independent spatial scaling in the task space." RO-MAN (2020) 
+for i in range( nq ):
+    if ( gd[ i ] - y0d[ i ] ) != 0:
+        W_LLS[ i, : ] = 1./( ( gd[ i ] - y0d[ i ] ) ) * W_LLS[ i, : ]
+    else:
+        W_LLS[ i, : ]= 0
 
 # Rollout of the trajectory
 # One can choose either the weights learned by LWR or LLS

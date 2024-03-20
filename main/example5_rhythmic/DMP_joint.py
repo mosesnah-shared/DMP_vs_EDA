@@ -100,7 +100,6 @@ qd   = np.zeros( ( nq, P ) )         # Demonstrated position
 dqd  = np.zeros( ( nq, P ) )         # Demonstrated velocity
 ddqd = np.zeros( ( nq, P ) )         # Demonstrated acceleration
 
-
 # The Initial position, velocity and the amplitude of the oscillatory movement
 q_init  = np.array( [ 0.5, 0.5 ] )
 qa_init = np.array( [ 0.1, 0.3 ] )
@@ -124,6 +123,8 @@ for i in range( nq ):
         # Element-wise multiplication and summation
         W_LWR[ i, j ] = np.sum( a_arr * b_arr * phi_arr ) / np.sum( a_arr * a_arr * phi_arr )
 
+W_LWR = np.nan_to_num( W_LWR )
+
 # Method2: Linear Least-square Regressions
 A_mat = np.zeros( ( N, P ) )
 B_mat = trans_sys.get_desired( qd, dqd, ddqd, q_init )
@@ -134,6 +135,8 @@ for i, t in enumerate( td ):
 
 # Weight with Linear Least-square Multiplication
 W_LLS = B_mat @ A_mat.T @ np.linalg.inv( A_mat @ A_mat.T )
+
+# For rhythmic movement, this is all we need!
 
 weight = W_LLS  # W_LWR
 
