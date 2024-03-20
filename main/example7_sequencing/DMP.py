@@ -209,7 +209,10 @@ while data.time <= T:
     if data.time <= t0:
         g = pi 
     else:    
-        g = g_new + ( pf - g_new ) * np.exp( -sd.tau * ( data.time - ( t0 + D/2 ) ) )
+        if data.time <= t0 + D/2:
+            g = pf
+        else:
+            g = g_new + ( pf - g_new ) * np.exp( -sd.tau * ( data.time - ( t0 + D/2 ) ) )
 
     # Updating the step
     # If it is the first step for simulation, just use the coupling term
