@@ -206,6 +206,9 @@ while data.time <= T:
         p_links_save.append( p_tmp )
         R_links_save.append( R_tmp )               
 
+# ========================================================================================== #
+# [Section #4] Save and Close
+# ========================================================================================== #
 # Saving the data
 if is_save:
     data_dic = { "t_arr": t_mat, "q_arr": q_mat, "p_arr": p_mat, "R_arr": R_mat, "R0_arr": R0_mat,

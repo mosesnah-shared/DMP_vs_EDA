@@ -21,13 +21,9 @@ def min_jerk_traj( t: float, ti: float, tf: float, pi: float, pf: float ):
                    The initial posture of the MJT.
 
             (5) pf: float (radian)
-                   The final posture of the MJT.
 
-            (6) D: float (Positive)
-                   The duration fo the movement.
-
-        Arguments
-        ---------
+        Returns
+        -------
             (1) q0   - minimum jerk trajectory, position
                     q0   =  qi + ( qf - qi ) * ( 1O ( t/D )^3 - 15 ( t/D )^4 + 6 ( t/D )^5 )
 

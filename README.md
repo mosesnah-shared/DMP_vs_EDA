@@ -68,11 +68,6 @@ pip install --upgrade pip
 ## Running the Application
 Once the installation is complete, please do check whether the following code is executable.
 ```bash
-pip install -r requirements.txt
-```
-
-Now, if you run the following Python Script and it runs successfully:
-```bash
 python ./main/example1_joint_discrete/EDA.py
 ```
-You are all set!
+If it is successful, you are all set!

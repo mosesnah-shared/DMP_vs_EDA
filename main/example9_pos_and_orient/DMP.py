@@ -18,11 +18,6 @@
 # [Section #1] Imports and Enviromental SETUPS
 # ========================================================================================== #
 
-
-# ========================================================================================== #
-# [Section #1] Imports and Enviromental SETUPS
-# ========================================================================================== #
-
 import sys
 import numpy as np
 import mujoco
@@ -180,55 +175,66 @@ ddp_arr = dz_arr/sd.tau
 # [Section #4] Imitation Learning, for Orientation
 # ========================================================================================== #
 
-# Saving the reference for task-space orientation
+# The code use the formulation from Koutras and Doulgeri (2020):
+# [REF] Koutras, Leonidas, and Zoe Doulgeri. "A correct formulation for the orientation dynamic movement primitives for robot control in the cartesian space." Conference on robot learning. PMLR, 2020.
+
+# Saving the Reference for task-space orientation.
 Rsb = data.site_xmat[ id_EE ]
 
-ang = 90 
-Rinit = np.copy( Rsb ).reshape( 3, -1 )
-Rgoal = Rinit @ rotx( ang*np.pi/180 ) 
+# The initial/goal orientation which we aim to achieve
+ang   = 90 
+Rinit = np.copy( Rsb ).reshape( 3, -1 )     # Initial Orientation, in SO(3)
+Rgoal = Rinit @ rotx( ang*np.pi/180 )       #    Goal Orientation, in SO(3)
+quat_init = SO3_to_quat( Rinit )            # Initial Orientation, in Unit Quaternion S(4)
+quat_goal = SO3_to_quat( Rgoal )            # Initial Orientation, in Unit Quaternion S(4)
 
-quat_init = SO3_to_quat( Rinit )
-quat_goal = SO3_to_quat( Rgoal )
-
+# Calculate the displacement and its Lie Algebra
 Rdel  = Rinit.T @ Rgoal
 wdel  = SO3_to_R3( Rdel )
 
-# Generating the min-jerk-traj of orientation
-# First generating in the so(3) Lie Algebra, then projecting back to SO(3)
-R_mat     = np.zeros( ( 3, 3, P ) )
-quat_mat  = np.zeros( ( 4, P ) )
-dquat_mat = np.zeros( ( 4, P ) )
+# The matrices which we collect for Imitation Learning
+R_mat     = np.zeros( ( 3, 3, P ) )         # The Orientation in SO( 3 )
+w_mat     = np.zeros( ( 3, P ) )            # The angular velocity of the trajectory
+quat_mat  = np.zeros( ( 4, P ) )            # Unit Quaternion representation
+dquat_mat = np.zeros( ( 4, P ) )            # The time derivative of the Unit Quaternion
 
-w_mat     = np.zeros( ( 3, P ) )
-err_mat   = np.zeros( ( 3, P ) )
-derr_mat  = np.zeros( ( 3, P ) )
+err_mat   = np.zeros( ( 3, P ) )            # Error vector, defined by Koutras and Doulgeri (2020).
+derr_mat  = np.zeros( ( 3, P ) )            # Time derivative of the Error vector, defined by Koutras and Doulgeri (2020).
 
+# The parameters for learning the trajectory is identical to those for position
 for i, t in enumerate( td ):
+
+    # The minimum-jerk trajectory on so(3) Lie Algebra
     tmp, dtmp, _ = min_jerk_traj( t, 0, D, np.zeros( 3 ), wdel )
-    R_calc    = Rinit @ R3_to_SO3( tmp )
-    quat_calc = SO3_to_quat( R_calc )
+
+    # The current R matrix and its corresponding Unit Quaternion
+    R_curr    = Rinit @ R3_to_SO3( tmp )
+    quat_curr = SO3_to_quat( R_curr )
+
+    # Saving these values
+    R_mat[ :, :, i ] =    R_curr
+    quat_mat[ :, i ] = quat_curr
 
     # Get the angular velocity 
-    w_mat[ :, i ] = so3_to_R3( R_calc @ R3_to_so3( dtmp ) @ R_calc.T  )
+    # The basic left-invariant equation, dR R^T
+    w_mat[ :, i ] = so3_to_R3( R_curr @ R3_to_so3( dtmp ) @ R_curr.T  )
 
-    # Save the R matrix
-    R_mat[ :, :, i ] = R_calc
+    # The Quaternion Error
+    err_mat[ :, i ]  = get_quat_error( quat_curr, quat_goal )
 
-    # Change rotation matrix to quaternion
-    quat_mat[ :, i ] = quat_calc
+    # The time derivative of the quaternion, which is simply:
+    # dq = 1/2 * w * q
+    tmp_arr       = np.zeros( 4 )
+    tmp_arr[ 1: ] = w_mat[ :, i ]       # 3D to 4D pure quaternion
 
-    # Also, getting the error vector
-    err_mat[ :, i ]  = get_quat_error( quat_calc, quat_goal )
+    # Calculation
+    dquat_mat[ :, i ] =  0.5 * quat_mul( tmp_arr, quat_curr )
 
-    tmp_arr = np.zeros( 4 )
-    tmp_arr[ 1: ] = w_mat[ :, i ]
-    dquat_mat[ :, i ] =  0.5 * quat_mul( tmp_arr, quat_calc )
-
-    # Get the time derivative of the error vector
+    # The ime derivative of the error vector
     derr_mat[ :, i ] = dLogQuat( quat_mat[ :, i ], dquat_mat[ :, i ] )
 
 # Once the terms are derived, do numerical differentiation for dderr_mat
-# Although there is an analytical form, numerical differentiation is enoguh.
+# Although there is an analytical form, numerical differentiation is "enough" for application [Moses C. Nah]
 dderr_mat = data_diff( derr_mat, td )
 
 # Method 1: Locally Weighted Regression
@@ -238,7 +244,10 @@ beta_z    = 0.5 * alpha_z
 N         = 50
 tau       = D
 
-# The Three elements of DMP
+# The Three Elements of DMP for Orientation
+# Note that the benefit of formulation Koutras and Doulgeri (2020) is that 
+# the DMP formulation is identical to Rn case. 
+# This is because we are learning the "error" vector, not the SO(3) itself.
 sd2        = CanonicalSystem( 'discrete', tau, alpha_s )
 fd2        = NonlinearForcingTerm( sd2, N )
 trans_sys2 = TransformationSystem( alpha_z, beta_z, sd2 )
@@ -246,10 +255,11 @@ trans_sys2 = TransformationSystem( alpha_z, beta_z, sd2 )
 # Method1: Locally Weighted Regression (LWR)
 W_LWR = np.zeros( ( 3, N ) )
 
-# Get the scaling part
+# Get the scaling matrix
+# Equation (9) of Koutras and Doulgeri (2020)
 scl_arr = 2 * get_quat_error( quat_init, quat_goal )
 
-# Iterating for each weight
+# Iterating to derive each weight
 for i in range( 3 ): # For XYZ coordinates
     for j in range( N ):
         a_arr = sd2.calc( td ) * scl_arr[ i ]
@@ -269,61 +279,73 @@ B_mat = trans_sys2.get_desired( err_mat, derr_mat, dderr_mat, np.zeros( 3 ) )
 for i, t in enumerate( td ):
     A_mat[ :, i ] = np.squeeze( fd2.calc_multiple_ith( t, np.arange( N, dtype=int ) ) ) / fd2.calc_whole_at_t( t ) * sd2.calc( t )
 
-# Weight with Linear Least-square Multiplication
+# Weight with Linear Least-square Regression
 W_LLS = B_mat @ A_mat.T @ np.linalg.inv( A_mat @ A_mat.T )
 
-# Scaling down 
+# Scaling down the weight array
 for i in range( 3 ):
     if scl_arr[ i ] != 0:
         W_LLS[ i, : ] = 1./scl_arr[ i ] * W_LLS[ i, : ]
 
+# Choose either weights learned from LWR or LLS
+weight = W_LLS # LWR
 
-weight = W_LLS
 
+# Rollout for the Equations
 y0 =  err_mat[ :, 0 ]             
 z0 = derr_mat[ :, 0 ] * tau
-
 sd2.tau = tau    
 
 # Calculate the nonlinear forcing term and do the rollout
 # The "trimmed" argument artifically set the nonlinear forcing term value to zero for time over the movement duration
 # Not necessary, but it clears out the "tail" of DMP at the end of the movement. 
 input_arr = fd2.calc_forcing_term( t_arr[:-1], weight, t0, np.diag( scl_arr ), trimmed = True )
-e_arr, _, de_arr, dz_arr = trans_sys2.rollout( y0, z0, np.zeros( 3 ), input_arr, 0, t_arr )
+e_arr, _, de_arr, dz_arr = trans_sys2.rollout( y0, z0, np.zeros( 3 ), input_arr, 0, t_arr )     # The third argument, goal is zero since error eventually converges to zero.
 dde_arr = dz_arr/sd.tau
 
-# Revive the quat Matrix 
-quat_revived  = np.zeros( ( 4, len( t_arr ) ) )
-dquat_revived = np.zeros( ( 4, len( t_arr ) ) )
-w_revived     = np.zeros( ( 3, len( t_arr ) ) )
+# Reconstruct the unit quaternion trajectory from the error vector.
+quat_traj  = np.zeros( ( 4, len( t_arr ) ) )
+dquat_traj = np.zeros( ( 4, len( t_arr ) ) )
+w_traj     = np.zeros( ( 3, len( t_arr ) ) )
+
+# Reconstruction from the error vector
+# Equation (15) of Koutras and Doulgeri (2020)
 
 for i in range( len( t_arr ) ):
+
+    # 3D Error vector to pure unit quaternion
     tmp1 = np.zeros( 4 )
     tmp1[ 1: ] = e_arr[ :, i ]
-    quat_revived[ :, i ] = quat_mul( quat_goal, quat_conj( ExpQuat( 0.5 * tmp1 ) ) )
+    quat_traj[ :, i ] = quat_mul( quat_goal, quat_conj( ExpQuat( 0.5 * tmp1 ) ) )
 
-    # Also revive the omega_desired from this
-    quat_tmp = quat_revived[ :, i ]
+    # Also calculate the angular velocity of the trajectory from error vectors
+    # Equation (21) and (22) of Koutras and Doulgeri (2020)
+    # Tedious calculation, but step by step!
+
+    quat_tmp = quat_traj[ :, i ]
     tmp0 = quat_mul( quat_goal, quat_conj( quat_tmp ) ) 
     tmp1 = -1/2*quat_mul( quat_tmp, quat_conj( quat_goal ) ) 
-    tmp2 = np.zeros( ( 4, 3 ) )
 
+    # Calculating the Jacobian matrix for quaternions, Equation (19) of Koutras and Doulgeri (2020)
+    Jac_tmp = np.zeros( ( 4, 3 ) )
     theta = np.linalg.norm( LogQuat( tmp0 ) )
 
     if np.isclose( theta , 0 ):
         n_vec = np.zeros( 3 )
-        tmp2[1:, :] = np.eye( 3 )
+        Jac_tmp[1:, :] = np.eye( 3 )
     else:
         n_vec = LogQuat( tmp0 )/theta 
-        tmp2[ 0,: ]   = -np.sin( theta )* n_vec[ 1: ]
-        tmp2[ 1:, : ] =  np.sin( theta )/theta * ( np.eye( 3 ) - np.outer( n_vec[ 1: ], n_vec[ 1: ] ) ) + np.cos( theta ) * np.outer( n_vec[ 1: ], n_vec[ 1: ] ) 
+        Jac_tmp[ 0,: ]   = -np.sin( theta )* n_vec[ 1: ]
+        Jac_tmp[ 1:, : ] =  np.sin( theta )/theta * ( np.eye( 3 ) - np.outer( n_vec[ 1: ], n_vec[ 1: ] ) ) + np.cos( theta ) * np.outer( n_vec[ 1: ], n_vec[ 1: ] ) 
 
-    tmp3 = tmp2 @ de_arr[ :, i ]
+    tmp3 = Jac_tmp @ de_arr[ :, i ]
 
-    dquat_revived[ :, i ] = quat_mul( quat_mul( tmp1, tmp3 ), quat_revived[ :, i  ] )
+    # Final calculation for dQ
+    dquat_traj[ :, i ] = quat_mul( quat_mul( tmp1, tmp3 ), quat_traj[ :, i  ] )
 
-    tmp = quat_mul( dquat_revived[ :, i ], quat_conj( quat_revived[ :, i ] ) )
-    w_revived[ :, i ] = 2*tmp[ 1: ]
+    # The angular velocity!
+    tmp = quat_mul( dquat_traj[ :, i ], quat_conj( quat_traj[ :, i ] ) )
+    w_traj[ :, i ] = 2*tmp[ 1: ]
     
 # ========================================================================================== #
 # [Section #4] Main Simulation
@@ -336,9 +358,23 @@ dq = data.qvel[ 0:nq ]
 # The data for mat save
 t_mat   = [ ]
 q_mat   = [ ] 
-q0_mat  = [ ] 
+p_mat   = [ ] 
 dq_mat  = [ ] 
-dq0_mat = [ ] 
+dp_mat  = [ ] 
+p_links_save = [ ]
+R_links_save = [ ]
+R_mat  = [ ]
+
+# Saving the position and orientation of 7 links
+# This is NOT required for the control, but for robot visualization at MATLAB
+p_ref = []
+R_ref = [] 
+
+for i in range( 7 ):
+    name = "iiwa14_link_" + str( i + 1 ) 
+
+    p_ref.append( data.body( name ).xpos )
+    R_ref.append( data.body( name ).xmat )
 
 # Other Flags
 is_save = True     # To save the data
@@ -347,42 +383,45 @@ is_view = True     # To view the simulation
 # Step number for the simulation
 n_sim = 0
 
-# The parameters of the controller
+# The parameters of the sliding-mode controller
 Gr =  10 * np.eye(  3 )
-Gp =  10* np.eye(  3 )
+Gp =  10 * np.eye(  3 )
 Gq =   3 * np.eye( nq )
 
 # Get the end-effector's ID and its position, translational and rotational Jacobian matrices
 EE_site = "site_end_effector"
 id_EE   = model.site( EE_site ).id
 p       = data.site_xpos[ id_EE ]
-Jp      = np.zeros( ( 3, nq ) )
-Jr      = np.zeros( ( 3, nq ) )
+Jp      = np.zeros(  (  3, nq ) )
+Jr      = np.zeros(  (  3, nq ) )
 J_arr   = np.vstack( ( Jp, Jr ) )
 
+
+
+# The main simulation
 while data.time <= T:
 
+    # Calculate the Jacobian matrices
     mujoco.mj_jacSite( model, data, Jp, Jr, id_EE )    
     J_arr = np.vstack( ( Jp, Jr ) )
 
+    # The end-effector velocity
     dp = Jp @ dq
 
-    # The current quaternion
-    R = np.copy( Rsb ).reshape( 3, -1 )    
-    quat_curr = SO3_to_quat( R )
+    # The current and desired orientation in quaternion formulation
+    quat_curr = SO3_to_quat( np.copy( Rsb ).reshape( 3, -1 )  )
+    quat_des  = quat_traj[ :, n_sim ]
 
+    # The xp and xrequation
     xp = dp_arr[ :, n_sim ] + Gp @ ( p_arr[ :, n_sim ] - p )
+    xr = w_traj[ :, n_sim ] + Gr @ ( quat_curr[ 0 ] * quat_des[ 1: ] - quat_des[ 0 ] * quat_curr[ 1: ] + R3_to_so3( quat_curr[ 1: ] ) @ quat_des[ 1: ] )
 
-    quat_tmp = quat_revived[ :, n_sim ]
-    xr = w_revived[ :, n_sim ] + Gr @ ( quat_curr[ 0 ] * quat_tmp[ 1: ] - quat_tmp[ 0 ] * quat_curr[ 1: ] + R3_to_so3( quat_curr[ 1: ] ) @ quat_tmp[ 1: ] )
-
-
+    # Pseudo inverse
     x_des_new = np.linalg.pinv( J_arr ) @ np.hstack( ( xp, xr ) )
 
-    if n_sim == 0:
-        dx = np.zeros( nq )
-    else:
-        dx = ( x_des_new - x_des_old ) / dt
+    # Again, dx is numerically calculated, since the analytical form is already computationally heavy to derive.
+    # dx already does the job for small enough dt [Moses C. Nah]
+    dx = ( x_des_new - x_des_old ) / dt if n_sim != 0 else np.zeros( nq )
 
     # Calculating the torque command
     
@@ -390,6 +429,7 @@ while data.time <= T:
     Mmat = np.zeros( ( nq, nq ) )
     mujoco.mj_fullM( model, Mmat, data.qM )
 
+    # The Torque input
     tau_input = Mmat @ ( dx + Gq @ ( x_des_new - dq ) ) + data.qfrc_bias
 
     # Torque command to the robot
@@ -404,13 +444,29 @@ while data.time <= T:
         viewer.render( )
         print( "[Time] %6.3f" % data.time )
 
-    # Saving the data
+
+    # Save Data
     if ( ( n_saves != ( data.time // t_save ) ) and is_save ):
         n_saves += 1
 
         t_mat.append(   np.copy( data.time ) )
-        q_mat.append(   np.copy( q   ) )
+        q_mat.append(   np.copy(  q  ) )
         dq_mat.append(  np.copy( dq  ) )
+        p_mat.append(   np.copy(  p  ) )
+        dp_mat.append(  np.copy( dp  ) )
+        R_mat.append(    np.copy( Rsb ).reshape( 3, -1 ) ) 
+
+        # For this, one needs to also save the link positions
+        # Also save the robot's link position and rotation matrices 
+        p_tmp = []
+        R_tmp = []
+        for i in range( 7 ):
+            p_tmp.append( np.copy( p_ref[ i ] ) )
+            R_tmp.append( np.copy( R_ref[ i ] ).reshape( 3, -1 ) )
+
+        # Also save the robot's link position and rotation matrices 
+        p_links_save.append( p_tmp )
+        R_links_save.append( R_tmp )     
 
     n_sim += 1
     x_des_old = x_des_new
@@ -418,13 +474,13 @@ while data.time <= T:
 # ========================================================================================== #
 # [Section #5] Save and Close
 # ========================================================================================== #
-# Save data as mat file for MATLAB visualization
-# Saved under ./data directory
+# Saving the data
 if is_save:
-    data_dic = { "t_arr": t_mat, "q_arr": q_mat, "dq_arr": dq_mat, "t_des": t_arr, "alphas": alphas, "az":az, "bz":bz, "N": N, "P": P }
-    
-    savemat( CURRENT_PATH + "/data/DMP.mat", data_dic ) 
-
+    # To many parameters to save, but just saving some of the variables.
+    data_dic = { "t_arr": t_mat, "q_arr": q_mat, "p_arr": p_mat, "R_arr": R_mat, "Gr": Gr, "Gp": Gp, "Gq":Gq, "quat_des": quat_traj, 
+                "dquat_des": dquat_traj, "w_des": w_traj, "err_arr": e_arr, "derr_arr": de_arr,  "dderr_arr": dde_arr, "t_des": td, 
+                "dp_arr": dp_mat, "dq_arr": dq_mat,  "p_links": p_links_save, "R_links": R_links_save }
+    savemat( CURRENT_PATH + "/data/DMP.mat", data_dic )
 
 if is_view:            
     viewer.close( )
