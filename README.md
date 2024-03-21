@@ -1,11 +1,26 @@
 # Dynamic Movement Prmitives (DMP) vs. Elementary Dynamic Actions (EDA)
 
 This Github repository contains the MuJoCo-python codes for running the simulations presented in this paper.
-We assume the usage of `venv` for the code, and also Python3.
-If Python3 is not installed, please download and install it from [python.org](https://www.python.org/).
+We assume the usage of `venv` for the code, and also Python3. If Python3 is not installed, please download and install it from [python.org](https://www.python.org/).
 
-## Details
-The code contains the details for 
+## Descriptions
+This code contains all the simulations included in the Manuscript: [**Robot Control based on Motor Primitives-A Comparison of Two Approaches**](https://arxiv.org/abs/2310.18771) written by [Moses C. Nah](https://mosesnah-shared.github.io/about.html), [Johannes Lachner](https://jlachner.github.io/) and [Neville Hogan](https://meche.mit.edu/people/faculty/neville@mit.edu). 
+
+The list of simulations are shown:
+- [Example 1: Discrete movement in Joint-space](./main/example1_joint_discrete)
+- [Example 2: Discrete movement in Task-space, Position](./main/example2_task_discrete)
+- [Example 3: Managing Unexpected Physical Contact](./main/example3_unexpected_contact)
+- [Example 4: Obstacle Avoidance](./main/example4_obstacle_avoidance)
+- [Example 5: Rhythmic Movement, both in Joint-space and Task-space](./main/example5_rhythmic)
+- [Example 6: Combination of Discrete and Rhythmic Movements, both in Joint-space and Task-space](./main/example6_discrete_and_rhythmic)
+- [Example 7: Sequencing Discrete Movements](./main/example7_sequencing)
+- [Example 8: Managing Kinematric Redundancy](./main/example8_redundancy)
+- [Example 9: Discrete movement in Task-space, Both Position and Orientation](./main/example9_pos_and_orient)
+
+All folders include codes for both Dynamic Movement Primitives (DMP) and Elementary Dynamic Actions (EDA), and each code is heavily commented for reproducability.
+
+## Getting Started
+To run the code, please follow the instructions below.
 
 ### Setting Up a Virtual Environment
 
@@ -52,4 +67,9 @@ Once the installation is complete, please do check whether the following code is
 ```bash
 pip install -r requirements.txt
 ```
-If the code successfully runs, then you are all set! Please do try out all the codes 
+
+Now, if you run the following Python Script and it runs successfully:
+```bash
+python ./main/example1_joint_discrete/EDA.py
+```
+You are all set!
