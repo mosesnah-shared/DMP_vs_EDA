@@ -1,20 +1,22 @@
 # Dynamic Movement Prmitives (DMP) vs. Elementary Dynamic Actions (EDA)
 This Github repository contains the MuJoCo-python codes for the simulation in Section 3.2 of the [**Robot Control based on Motor Primitives-A Comparison of Two Approaches**](https://arxiv.org/abs/2310.18771) written by [Moses C. Nah](https://mosesnah-shared.github.io/about.html), [Johannes Lachner](https://jlachner.github.io/) and [Neville Hogan](https://meche.mit.edu/people/faculty/neville@mit.edu). 
 
-![Example1_joint_discrete](../MATLAB/gifs/example1.gif)
+## Goal-directed Discrete Movement in Joint-Space
+This code is to generate Goal-directed discrete movement in joint-space.
+An example result for DMP and EDA are shown below. For DMP, perfect tracking in joint-space is achieved, whereas for EDA, a non-negligible displacement exists. 
 
+![Example1_joint_discrete](../../MATLAB/gifs/example1a.gif)
 
-# Dynamic Movement Prmitives (DMP)
-For Dynamic Movement Primitives, DMP for discrete movement is used. 
-Using Imitation Learning, the desired joint trajectory for position $\mathbf{q}_{des}(t)$, velocity $\dot{\mathbf{q}}_{des}(t)$ and acceleration $\ddot{\mathbf{q}}_{des}(t)$ are derived. 
-Once these terms are derived, the torque input is given from the Inverse Dynamics Model:
-$$
-    \bm{\tau}(t) = \mathbf{M}(\mathbf{q}_{des}(t))\ddot{\mathbf{q}}_{des}(t) + \mathbf{C}(\mathbf{q}_{des}(t), \dot{\mathbf{q}}_{des}(t))\dot{\mathbf{q}}_{des}(t) 
-$$
+To run the example for DMP:
+```bash
+    python -B DMP.py
+```
+To run the example for EDA:
+```bash
+    python -B EDA.py
+```
 
-# Elementary Dynamic Actions (EDA)
-The input torque command to the robot is simply a first-order joint-space impedance controller (or joint PD controller, given an ideal torque-source actuator):
-$$
-    \bm{\tau}(t) = \mathbf{K}_q (\mathbf{q}_0(t)-\mathbf{q}(t)) + \mathbf{B}_q(\dot{\mathbf{q}}_0(t) - \dot{\mathbf{q}}(t))
-$$
-The transparent robot shown in Elementary Dynamic Actions (right-side) is the Virtual robot configuration defined by $\mathbf{q}_0(t)$. 
+As pointed out in the [paper](https://arxiv.org/abs/2310.18771), one can reduce the tracking error for EDA, by increasing the joint-space stiffness and damping matrices.  
+An example is shown here, where if one uses a higher joint-space stiffness, the tracking error reduces. 
+
+![Example1_joint_discrete](../../MATLAB/gifs/example1b.gif)
