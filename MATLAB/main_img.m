@@ -354,10 +354,196 @@ mySaveFig( gcf, 'images/fig5a' )
 
 %% (--) ---- Figure 5b: Goal-directed, Stretched
 
+clc; close all; clear data*
+fs = 40;
+
+% Folder name
+dir_name = '../main/example2_task_discrete/data/';
+
+% =============================== Motor Primitives ==================================== %
+data_DMP = load( [ dir_name, 'DMP_sing.mat' ] );
+data_EDA = load( [ dir_name, 'EDA_Kp60_Bp20_sing.mat' ] );
+
+% Saving the start and end positions
+% Get the start and end of movements
+g_start = data_EDA.p0_arr(    1, : );
+g_end   = data_EDA.p0_arr( end, : );
+
+% ======================================================================== %
+% Plot1: Dynamic Movement Primitives
+subplot( 1, 2, 1 )
+hold on 
+
+% Get the x, y position of the joints 
+q_abs = cumsum( data_DMP.q_arr , 2 );
+x_arr = cumsum( cos( q_abs ), 2 );
+y_arr = cumsum( sin( q_abs ), 2 );
+
+alpha_arr = [0.2, 0.3, 0.3, 1.0];
+idx_arr   = [1, 400, 600, 850];
+
+for i = 1 : length( idx_arr )
+    idx = idx_arr( i );
+    alpha = alpha_arr( i );
+    scatter( [ 0, x_arr( idx, 1:end-1 ) ], [ 0, y_arr( idx, 1:end-1 ) ], 400, 'markerfacecolor', c.black, 'markeredgecolor', c.black, 'MarkerFaceAlpha', alpha,'MarkerEdgeAlpha',alpha  )
+    p2 = plot( [ 0, x_arr( idx, : ) ], [ 0, y_arr( idx, : ) ], 'color', c.black, 'linewidth', 4 );
+    p2.Color( 4 ) = alpha;
+    scatter( x_arr( idx, end ), y_arr( idx, end),  1200,  'markerfacecolor', c.blue, 'markeredgecolor', c.black, 'MarkerFaceAlpha', alpha,'MarkerEdgeAlpha',alpha  )
+end
+
+plot( x_arr( :, 2 ), y_arr( :, 2 ), 'linewidth', 8, 'color', c.blue )
+plot( data_DMP.p_des( 1, : ), data_DMP.p_des( 2, : ), 'linewidth', 4, 'color', c.black, 'linestyle',  '--' )
+
+% Start and End Location
+scatter( 0, g_start( 2 ), 300, 'o', 'markerfacecolor', c.pink_sunset, 'markeredgecolor', c.black, 'markerfacealpha', 1.0 )
+scatter( 0,   g_end( 2 ), 300, 'square', 'markerfacecolor', c.white, 'markeredgecolor', c.black, 'markerfacealpha', 1.0 )
+
+text( -0.75, g_start( 2 ), 'Start $\mathbf{p}_i$' , 'fontsize', fs)
+text( -0.75, g_end( 2 ), 'Goal $\mathbf{g}$'   , 'fontsize', fs )
+
+xlabel( '$X$ (m)', 'fontsize', fs );
+ylabel( '$Y$ (m)', 'fontsize', fs )
+axis equal
+
+set( gca, 'xlim', [-1.1, 1.1] , 'ylim', [-0.2, 2.4], 'xtick', [-1.0, 0.0, 1.0], 'ytick', [0.0, 1.0, 2.0], 'fontsize', 1.2*fs ) 
+
+% ======================================================================== %
+% Plot2: Elementary Dynamic Actions
+subplot( 1, 2, 2)
+hold on
+
+alpha_arr = [0.2, 0.3, 0.3, 1.0];
+idx_arr   = [1, 400, 600, 2000];
+
+% Get the x, y position of the joints 
+q_abs = cumsum( data_EDA.q_arr , 2 );
+x_arr = cumsum( cos( q_abs ), 2 );
+y_arr = cumsum( sin( q_abs ), 2 );
+
+
+for i = 1 : length( idx_arr )
+    idx = idx_arr( i );
+    alpha = alpha_arr( i );
+    scatter( [ 0, x_arr( idx, 1:end-1 ) ], [ 0, y_arr( idx, 1:end-1 ) ], 400, 'markerfacecolor', c.black, 'markeredgecolor', c.black, 'MarkerFaceAlpha', alpha,'MarkerEdgeAlpha',alpha  )
+    p2 = plot( [ 0, x_arr( idx, : ) ], [ 0, y_arr( idx, : ) ], 'color', c.black, 'linewidth', 4 );
+    p2.Color( 4 ) = alpha;
+    scatter( x_arr( idx, end ), y_arr( idx, end),  1200,  'markerfacecolor', c.orange, 'markeredgecolor', c.black, 'MarkerFaceAlpha', alpha,'MarkerEdgeAlpha',alpha  )
+
+end
+plot( data_EDA.p_arr(  :, 1 ) , data_EDA.p_arr( :, 2 ), 'linewidth', 8, 'color', c.orange )
+plot( data_EDA.p0_arr( :, 1 ), data_EDA.p0_arr( :, 2 ), 'linewidth', 4, 'color', c.black, 'linestyle',  '--' )
+
+% Start and End Location
+scatter( 0, g_start( 2 ), 300, 'o', 'markerfacecolor', c.pink_sunset, 'markeredgecolor', c.black, 'markerfacealpha', 1.0 )
+scatter( 0,   g_end( 2 ), 300, 'square', 'markerfacecolor', c.white, 'markeredgecolor', c.black, 'markerfacealpha', 1.0 )
+
+text( -0.75, g_start( 2 ), 'Start $\mathbf{p}_i$' , 'fontsize', fs)
+text( -0.75, g_end( 2 ), 'Goal $\mathbf{g}$'   , 'fontsize', fs )
+
+xlabel( '$X$ (m)', 'fontsize', fs )
+axis equal
+set( gca, 'xlim', [-1.1, 1.1] , 'ylim', [-0.2, 2.4], 'xtick', [-1.0, 0.0, 1.0], 'ytick', [0.0, 1.0, 2.0], 'fontsize', 1.2*fs ) 
+
+mySaveFig( gcf, 'images/fig5b' )
+
+%% (--) ---- Figure 5c: Goal-directed, Stretched, Damped Least-square of DMP
+
+clc; close all; clear data*
+fs = 40;
+
+% Folder name
+dir_name = '../main/example2_task_discrete/data/';
+
+% =============================== Motor Primitives ==================================== %
+data_DMP = load( [ dir_name, 'DMP_sing_damped.mat' ] );
+data_EDA = load( [ dir_name, 'EDA_Kp60_Bp20_sing.mat' ] );
+
+% Saving the start and end positions
+% Get the start and end of movements
+g_start = data_EDA.p0_arr(    1, : );
+g_end   = data_EDA.p0_arr( end, : );
+
+% ======================================================================== %
+% Plot1: Dynamic Movement Primitives
+subplot( 1, 2, 1 )
+hold on 
+
+% Get the x, y position of the joints 
+q_abs = cumsum( data_DMP.q_arr , 2 );
+x_arr = cumsum( cos( q_abs ), 2 );
+y_arr = cumsum( sin( q_abs ), 2 );
+
+alpha_arr = [0.2, 0.3, 0.3, 1.0];
+idx_arr   = [1, 400, 600, 3000];
+
+for i = 1 : length( idx_arr )
+    idx = idx_arr( i );
+    alpha = alpha_arr( i );
+    scatter( [ 0, x_arr( idx, 1:end-1 ) ], [ 0, y_arr( idx, 1:end-1 ) ], 400, 'markerfacecolor', c.black, 'markeredgecolor', c.black, 'MarkerFaceAlpha', alpha,'MarkerEdgeAlpha',alpha  )
+    p2 = plot( [ 0, x_arr( idx, : ) ], [ 0, y_arr( idx, : ) ], 'color', c.black, 'linewidth', 4 );
+    p2.Color( 4 ) = alpha;
+    scatter( x_arr( idx, end ), y_arr( idx, end),  1200,  'markerfacecolor', c.blue, 'markeredgecolor', c.black, 'MarkerFaceAlpha', alpha,'MarkerEdgeAlpha',alpha  )
+end
+
+plot( x_arr( :, 2 ), y_arr( :, 2 ), 'linewidth', 8, 'color', c.blue )
+plot( data_DMP.p_des( 1, : ), data_DMP.p_des( 2, : ), 'linewidth', 4, 'color', c.black, 'linestyle',  '--' )
+
+% Start and End Location
+scatter( 0, g_start( 2 ), 300, 'o', 'markerfacecolor', c.pink_sunset, 'markeredgecolor', c.black, 'markerfacealpha', 1.0 )
+scatter( 0,   g_end( 2 ), 300, 'square', 'markerfacecolor', c.white, 'markeredgecolor', c.black, 'markerfacealpha', 1.0 )
+
+text( -0.75, g_start( 2 ), 'Start $\mathbf{p}_i$' , 'fontsize', fs)
+text( -0.75, g_end( 2 ), 'Goal $\mathbf{g}$'   , 'fontsize', fs )
+
+xlabel( '$X$ (m)', 'fontsize', fs );
+ylabel( '$Y$ (m)', 'fontsize', fs )
+axis equal
+
+set( gca, 'xlim', [-1.1, 1.1] , 'ylim', [-0.2, 2.4], 'xtick', [-1.0, 0.0, 1.0], 'ytick', [0.0, 1.0, 2.0], 'fontsize', 1.2*fs ) 
+
+% ======================================================================== %
+% Plot2: Elementary Dynamic Actions
+subplot( 1, 2, 2)
+hold on
+
+alpha_arr = [0.2, 0.3, 0.3, 1.0];
+idx_arr   = [1, 400, 600, 2000];
+
+% Get the x, y position of the joints 
+q_abs = cumsum( data_EDA.q_arr , 2 );
+x_arr = cumsum( cos( q_abs ), 2 );
+y_arr = cumsum( sin( q_abs ), 2 );
+
+
+for i = 1 : length( idx_arr )
+    idx = idx_arr( i );
+    alpha = alpha_arr( i );
+    scatter( [ 0, x_arr( idx, 1:end-1 ) ], [ 0, y_arr( idx, 1:end-1 ) ], 400, 'markerfacecolor', c.black, 'markeredgecolor', c.black, 'MarkerFaceAlpha', alpha,'MarkerEdgeAlpha',alpha  )
+    p2 = plot( [ 0, x_arr( idx, : ) ], [ 0, y_arr( idx, : ) ], 'color', c.black, 'linewidth', 4 );
+    p2.Color( 4 ) = alpha;
+    scatter( x_arr( idx, end ), y_arr( idx, end),  1200,  'markerfacecolor', c.orange, 'markeredgecolor', c.black, 'MarkerFaceAlpha', alpha,'MarkerEdgeAlpha',alpha  )
+
+end
+plot( data_EDA.p_arr(  :, 1 ) , data_EDA.p_arr( :, 2 ), 'linewidth', 8, 'color', c.orange )
+plot( data_EDA.p0_arr( :, 1 ), data_EDA.p0_arr( :, 2 ), 'linewidth', 4, 'color', c.black, 'linestyle',  '--' )
+
+% Start and End Location
+scatter( 0, g_start( 2 ), 300, 'o', 'markerfacecolor', c.pink_sunset, 'markeredgecolor', c.black, 'markerfacealpha', 1.0 )
+scatter( 0,   g_end( 2 ), 300, 'square', 'markerfacecolor', c.white, 'markeredgecolor', c.black, 'markerfacealpha', 1.0 )
+
+text( -0.75, g_start( 2 ), 'Start $\mathbf{p}_i$' , 'fontsize', fs)
+text( -0.75, g_end( 2 ), 'Goal $\mathbf{g}$'   , 'fontsize', fs )
+
+xlabel( '$X$ (m)', 'fontsize', fs )
+axis equal
+set( gca, 'xlim', [-1.1, 1.1] , 'ylim', [-0.2, 2.4], 'xtick', [-1.0, 0.0, 1.0], 'ytick', [0.0, 1.0, 2.0], 'fontsize', 1.2*fs ) 
+
+mySaveFig( gcf, 'images/fig5c' )
+
 
 %% (--) Figure 6: Goal-directed Discrete Movement of EDA in Task-space, sensitivity to Different Parameters
 
-%% (--) ---- Figure 6b: Effect of Translational Stiffness
+%% (--) ---- Figure 6a: Effect of Translational Stiffness
 
 clc; close all; clear data*
 fs = 40; lw2 = 5;
@@ -513,7 +699,9 @@ ylabel( '$Y$ (m)', 'fontsize', fs  )
 mySaveFig( gcf, 'images/fig6b' )
 
 
-%% (--) Figure 7
+%% (--) Figure 7: Unexpected Physical Contact
+
+%% (--) Figure 8: Unexpected Physical Contact, Change of Gain over time
 
 %% (--) Figure 8
 
