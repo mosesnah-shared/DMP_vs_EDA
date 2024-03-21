@@ -43,7 +43,8 @@ class NonlinearForcingTerm:
         """
         assert np.isscalar( t_arr ) or ( isinstance( t_arr, np.ndarray ) and t_arr.ndim == 1 )
 
-        assert isinstance( i,  ( int, np.int32 ) ) and 0 <= i <= self.N-1
+        print( type( i ) )
+        assert isinstance( i,  ( int, np.int32, np.int64 ) ) and 0 <= i <= self.N-1
         
         ci = self.c_arr[ i ]
         hi = self.h_arr[ i ]

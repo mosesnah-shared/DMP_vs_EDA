@@ -59,6 +59,10 @@ With your virtual environment activated, install project dependencies by running
 pip install -r requirements.txt
 ```
 Note that all the packages required to run the code are already in the `requirements.txt`. 
+Moreover, please make sure that your `pip` is the recent version by typing:
+```bash
+pip install --upgrade pip
+```
 
 
 ## Running the Application
