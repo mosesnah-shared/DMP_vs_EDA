@@ -1,12 +1,11 @@
 # Dynamic Movement Prmitives (DMP) vs. Elementary Dynamic Actions (EDA)
 
-This Github repository contains the MuJoCo-python codes for running the simulations presented in this paper.
+This Github repository contains the MuJoCo-python codes for running the simulations presented in the Manuscript: [**Robot Control based on Motor Primitives-A Comparison of Two Approaches**](https://arxiv.org/abs/2310.18771) written by [Moses C. Nah](https://mosesnah-shared.github.io/about.html), [Johannes Lachner](https://jlachner.github.io/) and [Neville Hogan](https://meche.mit.edu/people/faculty/neville@mit.edu). 
+
 We assume the usage of `venv` for the code, and also Python3. If Python3 is not installed, please download and install it from [python.org](https://www.python.org/).
 
 ## Descriptions
-This code contains all the simulations included in the Manuscript: [**Robot Control based on Motor Primitives-A Comparison of Two Approaches**](https://arxiv.org/abs/2310.18771) written by [Moses C. Nah](https://mosesnah-shared.github.io/about.html), [Johannes Lachner](https://jlachner.github.io/) and [Neville Hogan](https://meche.mit.edu/people/faculty/neville@mit.edu). 
-
-The list of simulations are shown:
+The list of simulations are as follows:
 - [Example 1: Discrete movement in Joint-space](./main/example1_joint_discrete)
 - [Example 2: Discrete movement in Task-space, Position](./main/example2_task_discrete)
 - [Example 3: Managing Unexpected Physical Contact](./main/example3_unexpected_contact)
