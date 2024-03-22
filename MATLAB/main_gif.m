@@ -52,6 +52,7 @@ x_DMP = cumsum( cos( q_abs ), 2 );
 y_DMP = cumsum( sin( q_abs ), 2 );
 
 f = figure( ); 
+set( f,  'Units', 'pixels' );
 
 a1 = subplot( 1, 2, 1 );
 hold on
@@ -82,7 +83,9 @@ set( a2, 'xlim', [-0.3, 2.3] , 'ylim', [-0.2, 2.4], 'xtick', 0:1:2, 'ytick', 0:1
 title( a2, 'Elementary Dynamic Actions (EDA)')
 
 % Time per frame
-fps = 60;
+fps = 30;
+
+im_ratio = 0.25;
 t_arr = data_DMP.t_arr;
 T = max( data_DMP.t_arr );
 numFrames    = round( T*fps*1.5);
@@ -91,7 +94,7 @@ timePerFrame = T / numFrames;
 delayTime = 1./fps;
 
 T_min = 0.0;
-T_max = 3.0;
+T_max = 2.0;
 
 n_frame = 1;
 for frameIdx = 1:numFrames
@@ -123,6 +126,8 @@ for frameIdx = 1:numFrames
     % Capture the plot as an image 
     frame = getframe( f ); 
     im    = frame2im(frame); 
+    im = imresize(im, im_ratio );
+
     [imind,cm] = rgb2ind(im,256); 
     
     % Write to the GIF File 
@@ -594,7 +599,8 @@ text( a2, -0.5, g_end( 2 ), 'Goal $\mathbf{g}$'   , 'fontsize', fs )
 title( a2, 'EDA with High $\mathbf{K}_p$')
 
 % Time per frame
-fps = 60;
+fps = 15;
+im_ratio = 0.5;
 t_arr = data_EDA1.t_arr;
 T = max( data_EDA1.t_arr );
 numFrames    = round( T*fps*1.5);
@@ -634,6 +640,7 @@ for frameIdx = 1:numFrames
     % Capture the plot as an image 
     frame = getframe( f ); 
     im    = frame2im(frame); 
+    im = imresize( im, im_ratio );
     [imind,cm] = rgb2ind(im,256); 
     
     % Write to the GIF File 

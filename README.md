@@ -2,7 +2,9 @@
 
 This Github repository contains the MuJoCo-python codes for running the simulations presented in the Manuscript: [**Robot Control based on Motor Primitives-A Comparison of Two Approaches**](https://arxiv.org/abs/2310.18771) written by [Moses C. Nah](https://mosesnah-shared.github.io/about.html), [Johannes Lachner](https://jlachner.github.io/) and [Neville Hogan](https://meche.mit.edu/people/faculty/neville@mit.edu). 
 
-We assume the usage of `venv` for the code, and also Python3. If Python3 is not installed, please download and install it from [python.org](https://www.python.org/).
+We assume the usage of Python3 and `venv` for the code. If Python3 is not installed, please download and install it from [python.org](https://www.python.org/). Moreover, we assume the MuJoCo version from [Google's Deepmind team](https://github.com/google-deepmind/mujoco), where the detailed documentations can be found in [mujoco.org](https://mujoco.org/).
+
+For people who have been using MuJoCo for a long time (like me!), and have a laptop which contains MuJoCo Version 2.0 or lower which can be [downloaded for free on Roboti LLC](https://www.roboti.us/download.html), please instead refer to [this Github repository](https://github.com/mosesnah-shared/DMP-comparison). Note that the simulation examples and results are identical for both repository, the only difference is the MuJoCo version which one is using.
 
 ## Descriptions
 The list of simulations are as follows:
