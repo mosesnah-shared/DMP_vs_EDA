@@ -1,4 +1,4 @@
-# Dynamic Movement Prmitives (DMP) vs. Elementary Dynamic Actions (EDA)
+# Dynamic Movement Primitives (DMP) vs. Elementary Dynamic Actions (EDA)
 
 This Github repository contains the MuJoCo-python codes for running the simulations presented in the Manuscript: [**Robot Control based on Motor Primitives-A Comparison of Two Approaches**](https://arxiv.org/abs/2310.18771) written by [Moses C. Nah](https://mosesnah-shared.github.io/about.html), [Johannes Lachner](https://jlachner.github.io/) and [Neville Hogan](https://meche.mit.edu/people/faculty/neville@mit.edu). 
 
